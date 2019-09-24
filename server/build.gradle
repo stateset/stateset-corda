@@ -40,6 +40,9 @@ dependencies {
     compile "net.corda:corda-rpc:$corda_release_version"
     //runtime "net.corda:corda:$corda_release_version"
 
+    // Google Proxy
+    compile 'com.google.cloud.sql:postgres-socket-factory:1.0.15'
+
 
     // JSON API
     compile "javax.json:javax.json-api:1.1.3"
