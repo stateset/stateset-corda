@@ -492,7 +492,7 @@ class CarmenController() {
     }
 
 
-    /** Close Case. */
+    /** Close the Case. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com"])
     @PostMapping(value = "/closeCase")
