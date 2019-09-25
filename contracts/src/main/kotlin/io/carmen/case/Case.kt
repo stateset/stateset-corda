@@ -9,6 +9,7 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import java.lang.IllegalArgumentException
+import java.security.PublicKey
 
 // *********
 // * Case State *
@@ -17,8 +18,9 @@ import java.lang.IllegalArgumentException
 @CordaSerializable
 @BelongsToContract(CaseContract::class)
 data class Case(val caseId: String,
-                val description: String,
+                val caseName: String,
                 val caseNumber: String,
+                val description: String,
                 val caseStatus: CaseStatus,
                 val casePriority: CasePriority,
                 val submitter: Party,
@@ -34,8 +36,9 @@ data class Case(val caseId: String,
         return when (schema) {
             is CaseSchemaV1 -> CaseSchemaV1.PersistentCase(
                     caseId = this.caseId,
-                    description = this.description,
+                    caseName = this.caseName,
                     caseNumber = this.caseNumber,
+                    description = this.description,
                     caseStatus = this.caseStatus.toString(),
                     casePriority = this.casePriority.toString(),
                     submitter = this.submitter.toString(),
@@ -48,10 +51,12 @@ data class Case(val caseId: String,
 
 }
 
+@CordaSerializable
 enum class CaseStatus {
-    NEW, UNSTARTED, STARTED, WORKING, ESCALATED, CLOSED, OUTOFSCOPE
+    NEW, UNSTARTED, STARTED, WORKING, ESCALATED, CLOSED, OUTOFSCOPE, RESOLVED
 }
 
+@CordaSerializable
 enum class CasePriority {
     HIGH, MEDIUM, LOW
 
@@ -69,79 +74,68 @@ class CaseContract : Contract {
         val CASE_CONTRACT_ID = CaseContract::class.java.canonicalName
     }
 
+    // Used to indicate the transaction's intent.
+    interface Commands : CommandData {
+        class CreateCase : TypeOnlyCommandData(), Commands
+        class CloseCase : TypeOnlyCommandData(), Commands
+        class EscalateCase : TypeOnlyCommandData(), Commands
+        class ResolveCase: TypeOnlyCommandData(), Commands
+
+    }
+
     override fun verify(tx: LedgerTransaction) {
-        val caseInputs = tx.inputsOfType<Case>()
-        val caseOutputs = tx.outputsOfType<Case>()
-        val caseCommand = tx.commandsOfType<CaseContract.Commands>().single()
-
-        when (caseCommand.value) {
-            is Commands.SubmitCase -> requireThat {
-                "no inputs should be consumed" using (caseInputs.isEmpty())
-                // TODO we might allow several jobs to be proposed at once later
-                "one output should be produced" using (caseOutputs.size == 1)
-
-                val caseOutput = caseOutputs.single()
-                "the submitter should be different to the resolver" using (caseOutput.resolver != caseOutput.submitter)
-                //  "the status should be set as unstarted" using (caseOutput.caseStatus == CaseStatus.UNSTARTED)
-
-                "the resolver and submitter are required signer" using
-                        (caseCommand.signers.containsAll(listOf(caseOutput.resolver.owningKey, caseOutput.submitter.owningKey)))
-            }
-
-            is Commands.StartCase -> requireThat {
-                "one input should be consumed" using (caseInputs.size == 1)
-                "one output should bbe produced" using (caseOutputs.size == 1)
-
-                val caseInput = caseInputs.single()
-                val caseOutput = caseOutputs.single()
-                // "the status should be set to started" using (caseOutput.caseStatus == CaseStatus.STARTED)
-                "the previous status should not be STARTED" using (caseInput.caseStatus != CaseStatus.STARTED)
-                //  "only the job status should change" using (caseOutput == caseInput.copy(caseStatus = CaseStatus.STARTED))
-                "the submitter and resolver are required signers" using
-                        (caseCommand.signers.containsAll(listOf(caseOutput.resolver.owningKey, caseOutput.submitter.owningKey)))
-            }
-
-            is Commands.CloseCase -> requireThat {
-                "one input should be produced" using (caseInputs.size == 1)
-                "one output should be produced" using (caseOutputs.size == 1)
-
-                //    "the input status must be set as started" using (caseInputs.single().caseStatus == CaseStatus.STARTED)
-                //   "the output status should be set as finished" using (caseOutputs.single().caseStatus == CaseStatus.CLOSED)
-                //   "only the status must change" using (caseInput.copy(caseStatus = CaseStatus.CLOSED) == caseOutput)
-                "the update must be signed by the contractor of the " using (caseOutputs.single().submitter == caseInputs.single().submitter)
-                "the submitter should be signer" using (caseCommand.signers.contains(caseOutputs.single().submitter.owningKey))
-
-            }
-
-            is Commands.EscalateCase -> requireThat {
-
-            }
-
-            is Commands.CloseOutOfScopeCase -> requireThat {
-                // This insures we only have one input and one output
-                val caseOutput = caseOutputs.single()
-                val caseInput = caseInputs.single()
-
-                "Only status should have changed" using (caseOutput.submitter == caseInput.submitter
-                        && caseOutput.resolver == caseInput.resolver
-                        && caseOutput.description == caseInput.description)
-                //     "Status should show rejected" using (caseOutput.caseStatus == CaseStatus.OUTOFSCOPE)
-                //      "Job must have been previously started" using (caseInput.caseStatus == CaseStatus.STARTED)
-
-                "Resolver should be a signer" using (caseCommand.signers.contains(caseOutput.resolver.owningKey))
-            }
-
+        val command = tx.commands.requireSingleCommand<Commands>()
+        val setOfSigners = command.signers.toSet()
+        when (command.value) {
+            is Commands.CreateCase -> verifyCreate(tx, setOfSigners)
+            is Commands.CloseCase -> verifyClose(tx, setOfSigners)
+            is Commands.ResolveCase -> verifyResolve(tx, setOfSigners)
+            is Commands.EscalateCase -> verifyEscalate(tx, setOfSigners)
             else -> throw IllegalArgumentException("Unrecognised command.")
         }
     }
 
-    // Used to indicate the transaction's intent.
-    interface Commands : CommandData {
-        class SubmitCase : Commands
-        class StartCase : Commands
-        class CloseCase : Commands
-        class EscalateCase : Commands
-        class CloseOutOfScopeCase : Commands
+    private fun verifyCreate(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+                "no inputs should be consumed" using (tx.inputStates.isEmpty())
+                // TODO we might allow several jobs to be proposed at once later
+                "one output should be produced" using (tx.outputStates.size == 1)
 
+                val output = tx.outputsOfType<Case>().single()
+                "the submitter should be different to the resolver" using (output.resolver != output.submitter)
+
+                "Submitter only may sign the issue transaction." using (output.submitter.owningKey in signers)
+            }
+
+    private fun verifyClose(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+
+                "one input should be produced" using (tx.inputStates.size == 1)
+                "one output should be produced" using (tx.outputStates.size == 1)
+
+                //    "the input status must be set as started" using (caseInputs.single().caseStatus == CaseStatus.STARTED)
+                //   "the output status should be set as finished" using (caseOutputs.single().caseStatus == CaseStatus.CLOSED)
+                //   "only the status must change" using (caseInput.copy(caseStatus = CaseStatus.CLOSED) == caseOutput)
+                // "the update must be signed by the contractor of the " using (tx.inputStates.single().submitter == caseInputs.single().submitter)
+                // "the submitter should be signer" using (caseCommand.signers.contains(caseOutputs.single().submitter.owningKey))
+
+            }
+
+    private fun verifyResolve(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+                "one input should be produced" using (tx.inputStates.size == 1)
+                "one output should be produced" using (tx.inputStates.size == 1)
+
+                //    "the input status must be set as started" using (caseInputs.single().caseStatus == CaseStatus.STARTED)
+                //   "the output status should be set as finished" using (caseOutputs.single().caseStatus == CaseStatus.CLOSED)
+                //   "only the status must change" using (caseInput.copy(caseStatus = CaseStatus.CLOSED) == caseOutput)
+                //  " the update must be signed by the contractor of the " using (caseOutputs.single().submitter == caseInputs.single().submitter)
+                 // "the submitter should be signer" using (caseCommand.signers.contains(caseOutputs.single().submitter.owningKey))
+
+            }
+
+    private fun verifyEscalate(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+
+                //     "Status should show rejected" using (caseOutput.caseStatus == CaseStatus.OUTOFSCOPE)
+                //      "Job must have been previously started" using (caseInput.caseStatus == CaseStatus.STARTED)
+
+                //      "Resolver should be a signer" using (caseCommand.signers.contains(caseOutput.resolver.owningKey))
+        }
     }
-}

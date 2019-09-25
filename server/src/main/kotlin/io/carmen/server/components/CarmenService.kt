@@ -19,6 +19,8 @@ package io.carmen.server.components
 import com.github.manosbatsis.corbeans.spring.boot.corda.rpc.NodeRpcConnection
 import com.github.manosbatsis.corbeans.spring.boot.corda.service.CordaNodeServiceImpl
 import io.carmen.*
+import io.carmen.case.CasePriority
+import io.carmen.case.CaseStatus
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -144,7 +146,7 @@ class CarmenService(
 
 
     /** Create a Case */
-    fun createCase(caseId: String, description: String, caseNumber: String, casePriority: String, resolver: String): SignedTransaction {
+    fun createCase(caseId: String, caseName: String, caseNumber: String, description: String, caseStatus: CaseStatus, casePriority: CasePriority, resolver: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(resolver, exactMatch = true)
@@ -157,7 +159,32 @@ class CarmenService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateCaseFlow.Initiator::class.java, caseId, description, caseNumber, casePriority, resolver).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateCaseFlow.Initiator::class.java, caseId, caseName, caseNumber, description, caseStatus, casePriority, resolver).returnValue.getOrThrow()
     }
+
+    /** Close a Case! */
+    fun closeCase(caseId: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(CloseCaseFlow::class.java, caseId).returnValue.getOrThrow()
+    }
+
+    /** Resolve a Case! */
+    fun resolveCase(caseId: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(ResolveCaseFlow::class.java, caseId).returnValue.getOrThrow()
+    }
+
+    /** Escalate a Case! */
+    fun escalateCase(caseId: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(EscalateCaseFlow::class.java, caseId).returnValue.getOrThrow()
+    }
+
 
 }

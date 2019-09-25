@@ -291,7 +291,7 @@ object CreateLeadFlow {
 
 
 // *********
-// * Create Contact Flow *
+// * Create Case  Flow *
 // *********
 
 object CreateCaseFlow {
@@ -299,8 +299,10 @@ object CreateCaseFlow {
     @StartableByRPC
     @CordaSerializable
     class Initiator(val caseId: String,
-                    val description: String,
+                    val caseName: String,
                     val caseNumber: String,
+                    val description: String,
+                    val caseStatus: CaseStatus,
                     val casePriority: CasePriority,
                     val resolver: Party) : FlowLogic<SignedTransaction>() {
 
@@ -334,11 +336,10 @@ object CreateCaseFlow {
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
-            val caseStatus = CaseStatus.NEW
 
             // Generate an unsigned transaction.
-            val caseState = Case(caseId, description, caseNumber, caseStatus, casePriority, serviceHub.myInfo.legalIdentities.first(), resolver)
-            val txCommand = Command(CaseContract.Commands.SubmitCase(), caseState.participants.map { it.owningKey })
+            val caseState = Case(caseId, caseName, caseNumber, description, caseStatus, casePriority, serviceHub.myInfo.legalIdentities.first(), resolver)
+            val txCommand = Command(CaseContract.Commands.CreateCase(), caseState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary = notary)
                     txBuilder.addOutputState(caseState, CASE_CONTRACT_ID)
                     txBuilder.addCommand(txCommand)
@@ -355,7 +356,8 @@ object CreateCaseFlow {
     }
 
     @InitiatedBy(Initiator::class)
-    class Acceptor(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+    class
+    Resolver(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
@@ -368,6 +370,198 @@ object CreateCaseFlow {
             val txId = subFlow(signTransactionFlow).id
 
             return subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId = txId))
+        }
+    }
+}
+
+// *********
+// * Close Case Flow *
+// *********
+
+@InitiatingFlow
+@StartableByRPC
+class CloseCaseFlow(val caseId: String) : FlowLogic<SignedTransaction>() {
+
+    override val progressTracker = ProgressTracker()
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+
+        val caseStateAndRef = serviceHub.vaultService.queryBy<Case>().states.find {
+            it.state.data.caseId == caseId
+        } ?: throw IllegalArgumentException("No Case with ID $caseId found.")
+
+
+        val case = caseStateAndRef.state.data
+        val caseStatus = CaseStatus.CLOSED
+
+
+        // Creating the output.
+        val closedCase = Case(
+                case.caseId,
+                case.caseName,
+                case.caseNumber,
+                case.description,
+                caseStatus,
+                case.casePriority,
+                case.submitter,
+                case.resolver,
+                case.linearId)
+
+        // Building the transaction.
+        val notary = caseStateAndRef.state.notary
+        val txBuilder = TransactionBuilder(notary)
+        txBuilder.addInputState(caseStateAndRef)
+        txBuilder.addOutputState(closedCase, CaseContract.CASE_CONTRACT_ID)
+        txBuilder.addCommand(CaseContract.Commands.CloseCase(), ourIdentity.owningKey)
+        txBuilder.verify(serviceHub)
+        return serviceHub.signInitialTransaction(txBuilder)
+    }
+
+    @InitiatedBy(CloseCaseFlow::class)
+    class CaseCloser(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    val output = stx.tx.outputs.single().data
+                    "This must be a Case transaction." using (output is Case)
+                    val case= output as Case
+                    val caseStatus = CaseStatus.CLOSED
+                }
+            }
+
+            val signedTransaction = subFlow(signTransactionFlow)
+            return subFlow(ReceiveFinalityFlow(otherSideSession = otherPartySession, expectedTxId = signedTransaction.id))
+        }
+    }
+}
+
+
+
+// *********
+// * Close Case Flow *
+// *********
+
+@InitiatingFlow
+@StartableByRPC
+class ResolveCaseFlow(val caseId: String) : FlowLogic<SignedTransaction>() {
+
+    override val progressTracker = ProgressTracker()
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+
+        val caseStateAndRef = serviceHub.vaultService.queryBy<Case>().states.find {
+            it.state.data.caseId == caseId
+        } ?: throw IllegalArgumentException("No Case with ID $caseId found.")
+
+
+        val case = caseStateAndRef.state.data
+        val caseStatus = CaseStatus.RESOLVED
+
+
+        // Creating the output.
+        val resolvedCase = Case(
+                case.caseId,
+                case.caseName,
+                case.caseNumber,
+                case.description,
+                caseStatus,
+                case.casePriority,
+                case.submitter,
+                case.resolver,
+                case.linearId)
+
+        // Building the transaction.
+        val notary = caseStateAndRef.state.notary
+        val txBuilder = TransactionBuilder(notary)
+        txBuilder.addInputState(caseStateAndRef)
+        txBuilder.addOutputState(resolvedCase, CaseContract.CASE_CONTRACT_ID)
+        txBuilder.addCommand(CaseContract.Commands.ResolveCase(), ourIdentity.owningKey)
+        txBuilder.verify(serviceHub)
+        return serviceHub.signInitialTransaction(txBuilder)
+    }
+
+    @InitiatedBy(ResolveCaseFlow::class)
+    class CaseResolver(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    val output = stx.tx.outputs.single().data
+                    "This must be a Case transaction." using (output is Case)
+                    val case= output as Case
+                    val caseStatus = CaseStatus.RESOLVED
+                }
+            }
+
+            val signedTransaction = subFlow(signTransactionFlow)
+            return subFlow(ReceiveFinalityFlow(otherSideSession = otherPartySession, expectedTxId = signedTransaction.id))
+        }
+    }
+}
+
+
+// *********
+// * Escalate Case Flow *
+// *********
+
+@InitiatingFlow
+@StartableByRPC
+class EscalateCaseFlow(val caseId: String) : FlowLogic<SignedTransaction>() {
+
+    override val progressTracker = ProgressTracker()
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+
+        val caseStateAndRef = serviceHub.vaultService.queryBy<Case>().states.find {
+            it.state.data.caseId == caseId
+        } ?: throw IllegalArgumentException("No Case with ID $caseId found.")
+
+
+        val case = caseStateAndRef.state.data
+        val caseStatus = CaseStatus.ESCALATED
+
+
+        // Creating the output.
+        val escalatedCase = Case(
+                case.caseId,
+                case.caseName,
+                case.caseNumber,
+                case.description,
+                caseStatus,
+                case.casePriority,
+                case.submitter,
+                case.resolver,
+                case.linearId)
+
+        // Building the transaction.
+        val notary = caseStateAndRef.state.notary
+        val txBuilder = TransactionBuilder(notary)
+        txBuilder.addInputState(caseStateAndRef)
+        txBuilder.addOutputState(escalatedCase, CaseContract.CASE_CONTRACT_ID)
+        txBuilder.addCommand(CaseContract.Commands.ResolveCase(), ourIdentity.owningKey)
+        txBuilder.verify(serviceHub)
+        return serviceHub.signInitialTransaction(txBuilder)
+    }
+
+    @InitiatedBy(EscalateCaseFlow::class)
+    class Escalator(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    val output = stx.tx.outputs.single().data
+                    "This must be a Case transaction." using (output is Case)
+                    val case = output as Case
+                    val caseStatus = CaseStatus.ESCALATED
+                }
+            }
+
+            val signedTransaction = subFlow(signTransactionFlow)
+            return subFlow(ReceiveFinalityFlow(otherSideSession = otherPartySession, expectedTxId = signedTransaction.id))
         }
     }
 }

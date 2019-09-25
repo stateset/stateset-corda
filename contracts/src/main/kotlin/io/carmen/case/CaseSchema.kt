@@ -48,11 +48,14 @@ object CaseSchemaV1 : MappedSchema(schemaFamily = CaseSchema.javaClass, version 
             @Column(name = "caseId")
             var caseId: String,
 
-            @Column(name = "description")
-            var description: String,
+            @Column(name = "caseName")
+            var caseName: String,
 
             @Column(name = "caseNumber")
             var caseNumber: String,
+
+            @Column(name = "description")
+            var description: String,
 
             @Column(name = "caseStatus")
             var caseStatus: String,
@@ -71,6 +74,6 @@ object CaseSchemaV1 : MappedSchema(schemaFamily = CaseSchema.javaClass, version 
 
 
     ) : PersistentState() {
-        constructor() : this("default-constructor-required-for-hibernate", "", "", "", "", "", "", "")
+        constructor() : this("default-constructor-required-for-hibernate", "", "", "", "", "", "", "", "")
     }
 }

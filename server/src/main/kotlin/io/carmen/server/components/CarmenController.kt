@@ -456,9 +456,11 @@ class CarmenController() {
     @ApiOperation(value = "Create Case")
     fun createCase(@PathVariable nodeName: Optional<String>,
                    @RequestParam("caseId") caseId: String,
-                   @RequestParam("description") description: String,
+                   @RequestParam("caseName") caseName: String,
                    @RequestParam("caseNumber") caseNumber: String,
-                   @RequestParam("casePriority") casePriority: String,
+                   @RequestParam("description") description: String,
+                   @RequestParam("caseStatus") caseStatus: CaseStatus,
+                   @RequestParam("casePriority") casePriority: CasePriority,
                    @RequestParam("resolver") resolver: String?): ResponseEntity<Any?> {
 
 
@@ -469,10 +471,15 @@ class CarmenController() {
 
         val (status, message) = try {
 
-            val result = getService(nodeName).createCase(caseId, description, caseNumber, casePriority, resolver)
+            val result = getService(nodeName).createCase(caseId, caseName, caseNumber, description, caseStatus, casePriority, resolver)
 
             HttpStatus.CREATED to mapOf<String, String>(
                     "caseId" to "$caseId",
+                    "caseName" to "$caseName",
+                    "caseNumber" to "$caseNumber",
+                    "description" to "$description",
+                    "casePriority" to "$casePriority",
+                    "caseStatus" to "$caseStatus",
                     "resolver" to "$resolver"
             )
 
@@ -484,6 +491,75 @@ class CarmenController() {
         return ResponseEntity<Any?>(message, status)
     }
 
+
+    /** Close Case. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com"])
+    @PostMapping(value = "/closeCase")
+    @ApiOperation(value = "Close Case")
+    fun closeCase(@PathVariable nodeName: Optional<String>, @RequestParam("caseId") caseId: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val caseId = request.getParameter("caseId")
+        val (status, message) = try {
+
+            val result = getService(nodeName).closeCase(caseId)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "caseId" to "$caseId"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error closing case ${caseId}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+    /** Resolve Case. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com"])
+    @PostMapping(value = "/resolveCase")
+    @ApiOperation(value = "Resolve Case")
+    fun resolveCase(@PathVariable nodeName: Optional<String>, @RequestParam("caseId") caseId: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val caseId = request.getParameter("caseId")
+        val (status, message) = try {
+
+            val result = getService(nodeName).resolveCase(caseId)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "caseId" to "$caseId"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error resolving case ${caseId}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+    /** Escalate Case. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com"])
+    @PostMapping(value = "/escalateCase")
+    @ApiOperation(value = "Escalate Case")
+    fun escalateCase(@PathVariable nodeName: Optional<String>, @RequestParam("caseId") caseId: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val caseId = request.getParameter("caseId")
+        val (status, message) = try {
+
+            val result = getService(nodeName).escalateCase(caseId)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "caseId" to "$caseId"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error escalating case ${caseId}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
 
 
 
@@ -522,6 +598,8 @@ class CarmenController() {
         }
         return ResponseEntity<Any?>(message, status)
     }
+
+
 
 
 
