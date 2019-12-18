@@ -1,11 +1,11 @@
 apply plugin: 'net.corda.plugins.cordapp'
 
 cordapp {
-    targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion corda_platform_version.toInteger()
+    targetPlatformVersion 4
+    minimumPlatformVersion 4
     contract {
-        name "Carmen CRM Contracts"
-        vendor "Dapps Inc."
+        name "Stateset Contracts"
+        vendor "Stateset, Inc."
         licence "Open Source (Apache 2)"
         versionId 1
     }

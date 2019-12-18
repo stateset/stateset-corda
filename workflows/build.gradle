@@ -3,11 +3,11 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'net.corda.plugins.quasar-utils'
 
 cordapp {
-    targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion corda_platform_version.toInteger()
+    targetPlatformVersion 4
+    minimumPlatformVersion 4
     workflow {
-        name "Carmen CRM Workflows"
-        vendor "Dapps Inc."
+        name "Stateset Workflows"
+        vendor "Stateset, Inc."
         licence "Open Source (Apache 2)"
         versionId 1
     }

@@ -13,7 +13,7 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 springBoot {
     buildInfo()
-    mainClassName = "io.carmen.server.ApplicationKt"
+    mainClassName = "io.stateset.server.ApplicationKt"
 }
 
 jar {

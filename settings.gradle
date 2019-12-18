@@ -1,4 +1,4 @@
-rootProject.name = "carmen-crm"
+rootProject.name = "stateset"
 
 include 'workflows'
 include 'contracts'
