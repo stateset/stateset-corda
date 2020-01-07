@@ -17,8 +17,6 @@
 package io.stateset.account
 
 import net.corda.core.contracts.*
-import net.corda.core.contracts.Requirements.using
-import net.corda.core.crypto.NullKeys
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
@@ -82,7 +80,7 @@ data class Account(val accountId: String,
                     controller = this.controller.toString(),
                     processor = this.processor.toString()
             )
-            else -> throw IllegalArgumentException("Unrecognised schema $schema")
+            else -> throw IllegalArgumentException("Unrecognized schema $schema")
         }
     }
 }

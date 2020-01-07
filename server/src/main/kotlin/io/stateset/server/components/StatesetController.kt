@@ -1,5 +1,5 @@
 /**
- *   Copyright 2020, Stateset Inc.
+ *   Copyright 2020, Stateset.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
 
 package io.stateset.server.components
 
@@ -54,6 +53,7 @@ import io.stateset.application.Application
 import io.stateset.case.*
 import io.stateset.contact.*
 import io.stateset.chat.*
+import io.stateset.invoice.Invoice
 import io.stateset.lead.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
@@ -223,6 +223,30 @@ class StatesetController() {
                 "deliveredReceipt" to deliveredReceipt.toString(),
                 "fromMe" to fromMe.toString(),
                 "time" to time.toString())
+    }
+
+
+    private fun Invoice.toJson(): Map<String, String> {
+        return kotlin.collections.mapOf(
+                "invoiceNumber" to invoiceNumber,
+                "invoiceName" to invoiceName,
+                "billingReason" to billingReason,
+                "amountDue" to amountDue.toString(),
+                "amountPaid" to amountPaid.toString(),
+                "amountRemaining" to amountRemaining.toString(),
+                "subtotal" to subtotal.toString(),
+                "total" to total.toString(),
+                "party" to party.toString(),
+                "counterparty" to counterparty.toString(),
+                "dueDate" to dueDate,
+                "periodStartDate" to periodStartDate,
+                "periodEndDate" to periodEndDate,
+                "paid" to paid.toString(),
+                "active" to active.toString(),
+                "createdAt" to createdAt.toString(),
+                "lastUpdated" to lastUpdated.toString(),
+                "linerId" to linearId.toString()
+        )
     }
 
 

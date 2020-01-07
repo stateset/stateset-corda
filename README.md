@@ -1,15 +1,15 @@
-# Carmen CRM CorDapp
+# Stateset
 
-Carmen is a Customer Relationship Management (CRM) network for inter-firm process automation.
+Stateset is a financial network for working capital automation.
 
-### Carmen CRM Network Setup
+### Stateset Network Setup
 
 
-1) Install the Carmen CRM CorDapp locally via Git:
+1) Install the Stateset locally via Git:
 
 ```bash
 
-git clone https://github.com/dappsinc/carmen-cordapp
+git clone https://github.com/stateset/stateset
 
 ```
 
@@ -18,7 +18,7 @@ git clone https://github.com/dappsinc/carmen-cordapp
 
 ```bash
 
-cd carmen-cordapp && gradlew.bat deployNodes (Windows) OR ./gradlew deployNodes (Linux)
+cd stateset && gradlew.bat deployNodes (Windows) OR ./gradlew deployNodes (Linux)
 
 ```
 
@@ -42,7 +42,7 @@ cd server
 ../gradlew.bat bootRun -x test (Windows) OR ../gradlew bootRun -x test
 
 ```
-The Carmen CRM Network API Swagger will be running at `http://localhost:8080/swagger-ui.html#/`
+The Stateset Network API Swagger will be running at `http://localhost:8080/swagger-ui.html#/`
 
 To change the name of your `organisation` or any other parameters, edit the `node.conf` file and repeat the above steps.
 

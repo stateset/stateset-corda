@@ -17,13 +17,11 @@
 package io.stateset.invoice
 
 import net.corda.core.contracts.*
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.toBase58String
 import java.lang.Boolean.TRUE
@@ -142,7 +140,6 @@ class InvoiceContract : Contract {
                 "one input should be produced" using (invoiceInputs.size == 1)
                 "one output should be produced" using (invoiceOutputs.size == 1)
 
-                val invoiceInput = invoiceInputs.single()
                 val invoiceOutput = invoiceOutputs.single()
 
                 "the output paid should be TRUE" using (invoiceOutput.paid == TRUE)
@@ -152,7 +149,6 @@ class InvoiceContract : Contract {
                 "one input should be produced" using (invoiceInputs.size == 1)
                 "one output should be produced" using (invoiceOutputs.size == 1)
 
-                val invoiceInput = invoiceInputs.single()
                 val invoiceOutput = invoiceOutputs.single()
 
                 "the output paid should be TRUE" using (invoiceOutput.paid == TRUE)
