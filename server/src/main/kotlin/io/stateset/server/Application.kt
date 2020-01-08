@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ComponentScan
 
 
 /**
- * Our Spring Boot application.
+ * Our Spring Boot approval.
  */
 // Remove security and error handling
 @SpringBootApplication(exclude = arrayOf(SecurityAutoConfiguration::class, ErrorMvcAutoConfiguration::class))

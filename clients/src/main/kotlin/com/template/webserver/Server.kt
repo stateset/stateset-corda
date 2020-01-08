@@ -6,13 +6,13 @@ import org.springframework.boot.WebApplicationType.SERVLET
 import org.springframework.boot.autoconfigure.SpringBootApplication
 
 /**
- * Our Spring Boot application.
+ * Our Spring Boot approval.
  */
 @SpringBootApplication
 private open class Starter
 
 /**
- * Starts our Spring Boot application.
+ * Starts our Spring Boot approval.
  */
 fun main(args: Array<String>) {
     val app = SpringApplication(Starter::class.java)

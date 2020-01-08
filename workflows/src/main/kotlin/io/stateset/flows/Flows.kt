@@ -1,7 +1,6 @@
 package io.stateset
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.collect.ImmutableList
 import io.stateset.account.Account
 import io.stateset.account.AccountContract
 import io.stateset.account.AccountContract.Companion.ACCOUNT_CONTRACT_ID
@@ -11,10 +10,8 @@ import io.stateset.agreement.AgreementContract
 import io.stateset.agreement.AgreementContract.Companion.AGREEMENT_CONTRACT_ID
 import io.stateset.agreement.AgreementStatus
 import io.stateset.agreement.AgreementType
-import io.stateset.application.Application
-import io.stateset.application.ApplicationContract
-import io.stateset.application.ApplicationContract.Companion.APPLICATION_CONTRACT_ID
-import io.stateset.application.ApplicationStatus
+import io.stateset.approval.*
+import io.stateset.approval.ApprovalContract.Companion.APPROVAL_CONTRACT_ID
 import io.stateset.case.*
 import io.stateset.case.CaseContract.Companion.CASE_CONTRACT_ID
 import io.stateset.chat.Chat
@@ -24,25 +21,17 @@ import io.stateset.contact.ContactContract.Companion.CONTACT_CONTRACT_ID
 import io.stateset.lead.Lead
 import io.stateset.lead.LeadContract
 import io.stateset.lead.LeadContract.Companion.LEAD_CONTRACT_ID
-import io.stateset.chat.Chat.*
 import io.stateset.invoice.Invoice
 import io.stateset.invoice.InvoiceContract
 import io.stateset.invoice.InvoiceContract.Companion.INVOICE_CONTRACT_ID
 import net.corda.core.contracts.*
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -1169,19 +1158,19 @@ class SendMessage(private val to: Party, private val userId: String, private val
 
 
 // *********
-// * Create Application Flow *
+// * Create Approval Flow *
 // *********
 
 
 
-object CreateApplicationFlow {
+object CreateApprovalFlow {
     @StartableByRPC
     @InitiatingFlow
     @Suspendable
-    class Initiator(val applicationId: String,
-                    val applicationName: String,
+    class Initiator(val approvalId: String,
+                    val approvalName: String,
                     val industry: String,
-                    val applicationStatus: ApplicationStatus,
+                    val approvalStatus: ApprovalStatus,
                     val otherParty: Party) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -1216,11 +1205,11 @@ object CreateApplicationFlow {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
             progressTracker.currentStep = GENERATING_TRANSACTION
 
-            val applicationState = Application(applicationId, applicationName, industry, applicationStatus, serviceHub.myInfo.legalIdentities.first(), otherParty)
-            val txCommand = Command(ApplicationContract.Commands.CreateApplication(), applicationState.participants.map { it.owningKey })
+            val approvalState = Approval(approvalId, approvalName, industry, approvalStatus, serviceHub.myInfo.legalIdentities.first(), otherParty)
+            val txCommand = Command(ApprovalContract.Commands.CreateApproval(), approvalState.participants.map { it.owningKey })
             progressTracker.currentStep = VERIFYING_TRANSACTION
             val txBuilder = TransactionBuilder(notary)
-                    .addOutputState(applicationState, APPLICATION_CONTRACT_ID)
+                    .addOutputState(approvalState, APPROVAL_CONTRACT_ID)
                     .addCommand(txCommand)
 
             txBuilder.verify(serviceHub)
@@ -1244,7 +1233,7 @@ object CreateApplicationFlow {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be an Application transaction." using (output is Application)
+                    "This must be an Application transaction." using (output is Approval)
                 }
             }
 
@@ -1260,57 +1249,57 @@ object CreateApplicationFlow {
 
 
 // *********
-// * Approve Application Flow *
+// * Approve Flow *
 // *********
 
 @InitiatingFlow
 @StartableByRPC
-class ApproveApplicationFlow(val applicationId: String) : FlowLogic<SignedTransaction>() {
+class ApproveFlow(val approvalId: String) : FlowLogic<SignedTransaction>() {
 
     override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): SignedTransaction {
 
-        val applicationStateAndRef = serviceHub.vaultService.queryBy<Application>().states.find {
-            it.state.data.applicationId == applicationId
-        } ?: throw IllegalArgumentException("No agreement with ID $applicationId found.")
+        val approvalStateAndRef = serviceHub.vaultService.queryBy<Approval>().states.find {
+            it.state.data.approvalId == approvalId
+        } ?: throw IllegalArgumentException("No agreement with ID $approvalId found.")
 
 
-        val application = applicationStateAndRef.state.data
-        val applicationStatus = ApplicationStatus.APPROVED
+        val approval = approvalStateAndRef.state.data
+        val approvalStatus = ApprovalStatus.APPROVED
 
 
         // Creating the output.
-        val approvedApplication = Application(
-                application.applicationId,
-                application.applicationName,
-                application.industry,
-                applicationStatus,
-                application.agent,
-                application.provider,
-                application.linearId)
+        val approvedApproval = Approval(
+                approval.approvalId,
+                approval.approvalName,
+                approval.industry,
+                approvalStatus,
+                approval.submitter,
+                approval.approver,
+                approval.linearId)
 
         // Building the transaction.
-        val notary = applicationStateAndRef.state.notary
+        val notary = approvalStateAndRef.state.notary
         val txBuilder = TransactionBuilder(notary)
-        txBuilder.addInputState(applicationStateAndRef)
-        txBuilder.addOutputState(approvedApplication, ApplicationContract.APPLICATION_CONTRACT_ID)
-        txBuilder.addCommand(ApplicationContract.Commands.ApproveApplication(), ourIdentity.owningKey)
+        txBuilder.addInputState(approvalStateAndRef)
+        txBuilder.addOutputState(approvedApproval, ApprovalContract.APPROVAL_CONTRACT_ID)
+        txBuilder.addCommand(ApprovalContract.Commands.Approve(), ourIdentity.owningKey)
         txBuilder.verify(serviceHub)
         return serviceHub.signInitialTransaction(txBuilder)
     }
 
-    @InitiatedBy(ApproveApplicationFlow::class)
+    @InitiatedBy(ApproveFlow::class)
     class Approver(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be an Agreement transaction." using (output is Application)
-                    val application = output as Application
-                    val applicationStatus = ApplicationStatus.APPROVED
+                    "This must be an Agreement transaction." using (output is Approval)
+                    val approval = output as Approval
+                    val approvalStatus = ApprovalStatus.APPROVED
                 }
             }
 
@@ -1324,59 +1313,59 @@ class ApproveApplicationFlow(val applicationId: String) : FlowLogic<SignedTransa
 
 
 // *********
-// * Reject Application Flow *
+// * Reject Approval Flow *
 // *********
 
 
 @InitiatingFlow
 @StartableByRPC
-class RejectApplicationFlow(val applicationId: String) : FlowLogic<SignedTransaction>() {
+class RejectFlow(val approvalId: String) : FlowLogic<SignedTransaction>() {
 
     override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): SignedTransaction {
 
-        val applicationStateAndRef = serviceHub.vaultService.queryBy<Application>().states.find {
-            it.state.data.applicationId == applicationId
-        } ?: throw IllegalArgumentException("No agreement with ID $applicationId found.")
+        val approvalStateAndRef = serviceHub.vaultService.queryBy<Approval>().states.find {
+            it.state.data.approvalId == approvalId
+        } ?: throw IllegalArgumentException("No agreement with ID $approvalId found.")
 
 
-        val application = applicationStateAndRef.state.data
-        val applicationStatus = ApplicationStatus.REJECTED
+        val approval = approvalStateAndRef.state.data
+        val approvalStatus = ApprovalStatus.REJECTED
 
         // Creating the output.
-        val rejectedApplication = Application(
-                application.applicationId,
-                application.applicationName,
-                application.industry,
-                applicationStatus,
-                application.agent,
-                application.provider,
-                application.linearId)
+        val rejectedApproval = Approval(
+                approval.approvalId,
+                approval.approvalName,
+                approval.industry,
+                approvalStatus,
+                approval.submitter,
+                approval.approver,
+                approval.linearId)
 
         // Building the transaction.
-        val notary = applicationStateAndRef.state.notary
+        val notary = approvalStateAndRef.state.notary
         val txBuilder = TransactionBuilder(notary)
-        txBuilder.addInputState(applicationStateAndRef)
-        txBuilder.addOutputState(rejectedApplication, ApplicationContract.APPLICATION_CONTRACT_ID)
-        txBuilder.addCommand(ApplicationContract.Commands.RejectApplication(), ourIdentity.owningKey)
+        txBuilder.addInputState(approvalStateAndRef)
+        txBuilder.addOutputState(rejectedApproval, ApprovalContract.APPROVAL_CONTRACT_ID)
+        txBuilder.addCommand(ApprovalContract.Commands.Reject(), ourIdentity.owningKey)
         txBuilder.verify(serviceHub)
 
         val stx = serviceHub.signInitialTransaction(txBuilder)
         return serviceHub.signInitialTransaction(txBuilder)
     }
 
-    @InitiatedBy(RejectApplicationFlow::class)
+    @InitiatedBy(RejectFlow::class)
     class Rejecter(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be an Agreement transaction." using (output is Application)
-                    val application = output as Application
-                    val applicationStatus = ApplicationStatus.REJECTED
+                    "This must be an Agreement transaction." using (output is Approval)
+                    val approval = output as Approval
+                    val approvalStatus = ApprovalStatus.REJECTED
                 }
             }
 
@@ -1386,72 +1375,6 @@ class RejectApplicationFlow(val applicationId: String) : FlowLogic<SignedTransac
     }
 }
 
-
-
-
-// ****************
-// * Review Application Flow *
-// ****************
-
-
-
-@InitiatingFlow
-@StartableByRPC
-class ReviewApplicationFlow(val applicationId: String): FlowLogic<SignedTransaction>() {
-
-    override val progressTracker = ProgressTracker()
-
-    @Suspendable
-    override fun call(): SignedTransaction {
-
-        val applicationStateAndRef = serviceHub.vaultService.queryBy<Application>().states.find {
-            it.state.data.applicationId == applicationId
-        } ?: throw IllegalArgumentException("No agreement with ID $applicationId found.")
-
-
-        val application = applicationStateAndRef.state.data
-        val applicationStatus = ApplicationStatus.INREVIEW
-
-        // Creating the output.
-        val reviewedApplication = Application(
-                application.applicationId,
-                application.applicationName,
-                application.industry,
-                applicationStatus,
-                application.agent,
-                application.provider,
-                application.linearId)
-
-        // Building the transaction.
-        val notary = applicationStateAndRef.state.notary
-        val txBuilder = TransactionBuilder(notary)
-        txBuilder.addInputState(applicationStateAndRef)
-        txBuilder.addOutputState(reviewedApplication, ApplicationContract.APPLICATION_CONTRACT_ID)
-        txBuilder.addCommand(ApplicationContract.Commands.RejectApplication(), ourIdentity.owningKey)
-        txBuilder.verify(serviceHub)
-
-        val stx = serviceHub.signInitialTransaction(txBuilder)
-        return serviceHub.signInitialTransaction(txBuilder)
-    }
-
-    @InitiatedBy(ReviewApplicationFlow::class)
-    class Reviewer(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
-        @Suspendable
-        override fun call(): SignedTransaction {
-            val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
-                override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val output = stx.tx.outputs.single().data
-                    "This must be an Agreement transaction." using (output is Application)
-                    val application = output as Application
-                    val applicationStatus =  ApplicationStatus.INREVIEW
-                }
-            }
-
-            val signedTransaction = subFlow(signTransactionFlow)
-            return subFlow(ReceiveFinalityFlow(otherSideSession = otherPartySession, expectedTxId = signedTransaction.id))
-        }
-    }
-}
 
 // *********
 // * Create Invoice Flow *

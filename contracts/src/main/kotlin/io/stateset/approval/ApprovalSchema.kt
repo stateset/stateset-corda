@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package io.stateset.application
+package io.stateset.approval
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -23,26 +23,26 @@ import javax.persistence.Entity
 import javax.persistence.Table
 
 
-object ApplicationSchema
+object ApprovalSchema
 
-object ApplicationSchemaV1 : MappedSchema(
-        schemaFamily = ApplicationSchema.javaClass,
+object ApprovalSchemaV1 : MappedSchema(
+        schemaFamily = ApprovalSchema.javaClass,
         version = 1,
-        mappedTypes = listOf(PersistentApplication::class.java)) {
+        mappedTypes = listOf(PersistentApproval::class.java)) {
     @Entity
-    @Table(name = "application_states")
-    class PersistentApplication(
-            @Column(name = "applicationId")
-            var applicationId: String,
+    @Table(name = "approval_states")
+    class PersistentApproval(
+            @Column(name = "approvalId")
+            var approvalId: String,
 
-            @Column(name = "applicationName")
-            var applicationName: String,
+            @Column(name = "approvalName")
+            var approvalName: String,
 
             @Column(name = "industry")
             var industry: String,
 
-            @Column(name = "applicationStatus")
-            var applicationStatus: String,
+            @Column(name = "approvalStatus")
+            var approvalStatus: String,
 
             @Column(name = "agent")
             var agent: String,
@@ -55,10 +55,10 @@ object ApplicationSchemaV1 : MappedSchema(
     ) : PersistentState() {
         @Suppress("UNUSED")
         constructor() : this(
-                applicationId = "",
-                applicationName = "",
+                approvalId = "",
+                approvalName = "",
                 industry = "",
-                applicationStatus = "",
+                approvalStatus = "",
                 agent = "",
                 provider = "",
                 linearId = ""

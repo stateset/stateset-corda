@@ -16,14 +16,7 @@
 
 package io.stateset.server.components
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.builder
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -35,21 +28,15 @@ import com.github.manosbatsis.corbeans.spring.boot.corda.config.NodeParams
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.User
 import java.util.*
 import javax.annotation.PostConstruct
-import org.springframework.security.oauth2.client.OAuth2ClientContext
-import org.springframework.security.oauth2.client.OAuth2RestTemplate
-import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails
-import org.springframework.security.oauth2.provider.OAuth2Authentication
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.CrossOrigin
 import io.stateset.account.*
 import io.stateset.agreement.Agreement
 import io.stateset.agreement.AgreementStatus
 import io.stateset.agreement.AgreementType
-import io.stateset.application.Application
+import io.stateset.approval.Approval
 import io.stateset.case.*
 import io.stateset.contact.*
 import io.stateset.chat.*
@@ -133,15 +120,14 @@ class StatesetController() {
 
     /** Maps an Application to a JSON object. */
 
-    private fun Application.toJson(): Map<String, String> {
+    private fun Approval.toJson(): Map<String, String> {
         return kotlin.collections.mapOf(
-                "agent" to agent.name.organisation,
-                "provider" to provider.name.organisation,
-                "counterparty" to provider.name.toString(),
-                "applicationId" to applicationId,
-                "applicationName" to applicationName,
+                "submitter" to submitter.name.organisation,
+                "approver" to approver.name.organisation,
+                "approvalId" to approvalId,
+                "approvalName" to approvalName,
                 "industry" to industry,
-                "applicationStatus" to applicationStatus.toString())
+                "approvalStatus" to approvalStatus.toString())
     }
 
 
@@ -253,7 +239,7 @@ class StatesetController() {
     /** Returns a list of existing Messages. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping( "/getMessages", produces = arrayOf("application/json"))
+    @GetMapping( "/getMessages", produces = arrayOf("approval/json"))
     @ApiOperation(value = "Get Baton Messages")
     fun getMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Chat.Message>().states
@@ -265,7 +251,7 @@ class StatesetController() {
     /** Get Messages by UserId */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping("/getMessages/userId", produces = arrayOf("application/json"))
+    @GetMapping("/getMessages/userId", produces = arrayOf("approval/json"))
     @ApiOperation(value = "Get Baton Messages by userId")
     fun getMessagesByUserId(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Chat.Message>().states
@@ -277,7 +263,7 @@ class StatesetController() {
     /** Returns a list of received Messages. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping("/getReceivedMessages", produces = arrayOf("application/json"))
+    @GetMapping("/getReceivedMessages", produces = arrayOf("approval/json"))
     @ApiOperation(value = "Get Received Baton Messages")
     fun getRecievedMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Chat.Message>().states
@@ -288,7 +274,7 @@ class StatesetController() {
     /** Returns a list of Sent Messages. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping("/getSentMessages", produces = arrayOf("application/json"))
+    @GetMapping("/getSentMessages", produces = arrayOf("approval/json"))
     @ApiOperation(value = "Get Sent Baton Messages")
     fun getSentMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Chat.Message>().states
@@ -336,11 +322,11 @@ class StatesetController() {
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
     @GetMapping("/getApplications")
-    @ApiOperation(value = "Get Applications")
-    fun getApplications(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val applicationStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Application::class.java).states
-        val applicationStates = applicationStateAndRefs.map { it.state.data }
-        return applicationStates.map { it.toJson() }
+    @ApiOperation(value = "Get Approvals")
+    fun getApprovals(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
+        val approvalStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Approval::class.java).states
+        val approvalStates = approvalStateAndRefs.map { it.state.data }
+        return approvalStates.map { it.toJson() }
     }
 
 
@@ -638,16 +624,16 @@ class StatesetController() {
 
 
 
-    /** Creates an Application. */
+    /** Creates an Approval. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/createApplication")
-    @ApiOperation(value = "Create Application")
-    fun createApplication(@PathVariable nodeName: Optional<String>,
-                   @RequestParam("applicationId") applicationId: String,
-                   @RequestParam("applicationName") applicationName: String,
+    @PostMapping("/createApproval")
+    @ApiOperation(value = "Create Approval")
+    fun createApproval(@PathVariable nodeName: Optional<String>,
+                   @RequestParam("approvalId") approvalId: String,
+                   @RequestParam("approvalName") approvalName: String,
                    @RequestParam("industry") industry: String,
-                   @RequestParam("applicationStatus") applicationStatus: String,
+                   @RequestParam("approvalStatus") approvalStatus: String,
                    @RequestParam("partyName") partyName: String?): ResponseEntity<Any?> {
 
 
@@ -658,10 +644,10 @@ class StatesetController() {
 
         val (status, message) = try {
 
-            val result = getService(nodeName).createApplication(applicationId, applicationName, industry, applicationStatus, partyName)
+            val result = getService(nodeName).createApproval(approvalId, approvalName, industry, approvalStatus, partyName)
 
             HttpStatus.CREATED to mapOf<String, String>(
-                    "applicationd" to "$applicationId",
+                    "approvald" to "$approvalId",
                     "partyName" to "$partyName"
             )
 
@@ -677,46 +663,46 @@ class StatesetController() {
 
 
 
-    /** Approve Application. */
+    /** Approve Approval. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping(value = "/approveApplication")
-    @ApiOperation(value = "Approve Application")
-    fun approveApplication(@PathVariable nodeName: Optional<String>, @RequestParam("applicationId") applicationId: String, request: HttpServletRequest): ResponseEntity<Any?> {
-        val applicationId = request.getParameter("agreementId")
+    @PostMapping(value = "/approveApproval")
+    @ApiOperation(value = "Approve Approval")
+    fun approveApproval(@PathVariable nodeName: Optional<String>, @RequestParam("approvalId") approvalId: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val approvalId = request.getParameter("agreementId")
         val (status, message) = try {
 
-            val result = getService(nodeName).approveApplication(applicationId)
+            val result = getService(nodeName).approve(approvalId)
 
             HttpStatus.CREATED to mapOf<String, String>(
-                    "applicationId" to "$applicationId"
+                    "approvalId" to "$approvalId"
             )
 
         } catch (e: Exception) {
-            logger.error("Error approving application ${applicationId}", e)
+            logger.error("Error approving approval ${approvalId}", e)
             e.printStackTrace()
             HttpStatus.BAD_REQUEST to e.message
         }
         return ResponseEntity<Any?>(message, status)
     }
 
-    /** Reject Application. */
+    /** Reject Approval. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping(value = "/rejectApplication")
-    @ApiOperation(value = "Reject Application")
-    fun rejectApplication(@PathVariable nodeName: Optional<String>, @RequestParam("applicationId") applicationId: String, request: HttpServletRequest): ResponseEntity<Any?> {
-        val applicationId = request.getParameter("applicationId")
+    @PostMapping(value = "/rejectApproval")
+    @ApiOperation(value = "Reject Approval")
+    fun rejectApproval(@PathVariable nodeName: Optional<String>, @RequestParam("approvalId") approvalId: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val approvalId = request.getParameter("approvalId")
         val (status, message) = try {
 
-            val result = getService(nodeName).rejectApplication(applicationId)
+            val result = getService(nodeName).reject(approvalId)
 
             HttpStatus.CREATED to mapOf<String, String>(
-                    "applicationId" to "$applicationId"
+                    "approvalId" to "$approvalId"
             )
 
         } catch (e: Exception) {
-            logger.error("Error rejecting Application ${applicationId}", e)
+            logger.error("Error rejecting Approval ${approvalId}", e)
             e.printStackTrace()
             HttpStatus.BAD_REQUEST to e.message
         }

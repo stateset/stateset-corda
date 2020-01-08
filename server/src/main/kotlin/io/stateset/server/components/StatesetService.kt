@@ -55,8 +55,8 @@ class StatesetService(
     }
 
 
-    /** Create an Application */
-    fun createApplication(applicationId: String, applicationName: String, industry: String, applicationStatus: String, partyName: String ): SignedTransaction {
+    /** Create an Approval */
+    fun createApproval(approvalId: String, approvalName: String, industry: String, approvalStatus: String, partyName: String ): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(partyName, exactMatch = true)
@@ -69,26 +69,26 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateAccountFlow.Controller::class.java, applicationId, applicationName, industry, applicationStatus, processor).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateAccountFlow.Controller::class.java, approvalId, approvalName, industry, approvalStatus, processor).returnValue.getOrThrow()
     }
 
 
-    /** Approve an Application! */
-    fun approveApplication(applicationId: String): SignedTransaction {
+    /** Approve an Approval! */
+    fun approve(approvalId: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(ApproveApplicationFlow::class.java, applicationId).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(ApproveFlow::class.java, approvalId).returnValue.getOrThrow()
     }
 
 
 
-    /** Reject an Application! */
-    fun rejectApplication(applicationId: String): SignedTransaction {
+    /** Reject an Approval! */
+    fun reject(approvalId: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(RejectApplicationFlow::class.java, applicationId).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(RejectFlow::class.java, approvalId).returnValue.getOrThrow()
     }
 
 
