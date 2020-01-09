@@ -38,24 +38,24 @@ object AgreementSchemaV1 : MappedSchema(
         mappedTypes = listOf(PersistentAgreement::class.java)) {
     @Entity
     @Table(name = "agreement_states", indexes = arrayOf(Index(name = "idx_agreement_party", columnList = "party"),
-            Index(name = "idx_agreement_agreementName", columnList = "agreementName")))
+            Index(name = "idx_agreement_agreement_name", columnList = "agreement_name")))
     class PersistentAgreement(
-            @Column(name = "agreementNumber")
+            @Column(name = "agreement_number")
             var agreementNumber: String,
 
-            @Column(name = "agreementName")
+            @Column(name = "agreement_name")
             var agreementName: String,
 
-            @Column(name = "agreementHash")
+            @Column(name = "agreement_hash")
             var agreementHash: String,
 
-            @Column(name = "agreementStatus")
+            @Column(name = "agreement_status")
             var agreementStatus: String,
 
-            @Column(name = "agreementType")
+            @Column(name = "agreement_type")
             var agreementType: String,
 
-            @Column(name = "totalAgreementValue")
+            @Column(name = "total_agreement_value")
             var totalAgreementValue: String,
 
             @Column(name = "party")
@@ -64,17 +64,12 @@ object AgreementSchemaV1 : MappedSchema(
             @Column(name = "counterparty")
             var counterparty: String,
 
-            @Column(name = "agreementStartDate")
+            @Column(name = "agreement_startdate")
             var agreementStartDate: String,
 
-            @Column(name = "agreementEndDate")
+            @Column(name = "agreement_enddate")
             var agreementEndDate: String,
-            //     @Column(name = "active")
-            //     var active: String,
-            //     @Column(name = "createdAt")
-            //     var createdAt: String,
-            //     @Column(name = "lastUpdated")
-            //     var lastUpdated: String,
+
             @Column(name = "linear_id")
             var linearId: String
             //     @Column(name = "external_Id")

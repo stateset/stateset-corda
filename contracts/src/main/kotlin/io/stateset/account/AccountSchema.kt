@@ -24,15 +24,15 @@ object AccountSchema
 object AccountSchemaV1 : MappedSchema(AccountSchema.javaClass, 1, listOf(PersistentAccount::class.java)) {
     @Entity
     @Table(name = "account_states", indexes = arrayOf(Index(name = "idx_account_controller", columnList = "controller"),
-            Index(name = "idx_account_accountName", columnList = "accountName")))
+            Index(name = "idx_account_accountName", columnList = "account_name")))
     class PersistentAccount(
-            @Column(name = "accountId")
+            @Column(name = "account_id")
             var accountId: String,
 
-            @Column(name = "accountName")
+            @Column(name = "account_name")
             var accountName: String,
 
-            @Column(name = "accountType")
+            @Column(name = "account_type")
             var accountType: String,
 
             @Column(name = "industry")
@@ -41,22 +41,22 @@ object AccountSchemaV1 : MappedSchema(AccountSchema.javaClass, 1, listOf(Persist
             @Column(name = "phone")
             var phone: String,
 
-            @Column(name = "yearStarted")
+            @Column(name = "year_started")
             var yearStarted: String,
 
-            @Column(name = "annualRevenue")
+            @Column(name = "annual_revenue")
             var annualRevenue: String,
 
-            @Column(name = "businessAddress")
+            @Column(name = "business_address")
             var businessAddress: String,
 
-            @Column(name = "businessCity")
+            @Column(name = "business_city")
             var businessCity: String,
 
-            @Column(name = "businessState")
+            @Column(name = "business_state")
             var businessState: String,
 
-            @Column(name = "businessZipCode")
+            @Column(name = "business_zipcode")
             var businessZipCode: String,
 
             @Column(name = "controller")

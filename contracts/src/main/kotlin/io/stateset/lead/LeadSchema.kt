@@ -24,15 +24,15 @@ object LeadSchema
 object LeadSchemaV1 : MappedSchema(schemaFamily = LeadSchema.javaClass, version = 1, mappedTypes = listOf(PersistentLead::class.java)) {
     @Entity
     @Table(name = "lead_states", indexes = arrayOf(Index(name = "idx_lead_controller", columnList = "controller"),
-            Index(name = "idx_lead_lastName", columnList = "lastName")))
+            Index(name = "idx_lead_last_name", columnList = "last_name")))
     class PersistentLead(
-            @Column(name = "leadId")
+            @Column(name = "lead_id")
             var leadId: String,
 
-            @Column(name = "firstName")
+            @Column(name = "first_name")
             var firstName: String,
 
-            @Column(name = "lastName")
+            @Column(name = "last_name")
             var lastName: String,
 
             @Column(name = "company")
@@ -56,7 +56,7 @@ object LeadSchemaV1 : MappedSchema(schemaFamily = LeadSchema.javaClass, version 
             @Column(name = "processor")
             var processor: String,
 
-            @Column(name = "linearId")
+            @Column(name = "linear_id")
             var linearId: String
 
 

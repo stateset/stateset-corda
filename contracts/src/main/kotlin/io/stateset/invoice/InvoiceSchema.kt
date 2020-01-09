@@ -37,24 +37,24 @@ object InvoiceSchemaV1 : MappedSchema(
         mappedTypes = listOf(PersistentInvoice::class.java)) {
     @Entity
     @Table(name = "invoice_states", indexes = arrayOf(Index(name = "idx_invoice_party", columnList = "party"),
-            Index(name = "idx_invoice_invoiceName", columnList = "invoiceName")))
+            Index(name = "idx_invoice_invoice_name", columnList = "invoice_name")))
     class PersistentInvoice(
-            @Column(name = "invoiceNumber")
+            @Column(name = "invoice_number")
             var invoiceNumber: String,
 
-            @Column(name = "invoiceName")
+            @Column(name = "invoice_name")
             var invoiceName: String,
 
-            @Column(name = "billingReason")
+            @Column(name = "billing_eason")
             var billingReason: String,
 
-            @Column(name = "amountDue")
+            @Column(name = "amount_due")
             var amountDue: String,
 
-            @Column(name = "amountPaid")
+            @Column(name = "amount_paid")
             var amountPaid: String,
 
-            @Column(name = "amountRemaining")
+            @Column(name = "amount_remaining")
             var amountRemaining: String,
 
             @Column(name = "subtotal")
@@ -69,13 +69,13 @@ object InvoiceSchemaV1 : MappedSchema(
             @Column(name = "counterparty")
             var counterparty: String,
 
-            @Column(name = "dueDate")
+            @Column(name = "due_date")
             var dueDate: String,
 
-            @Column(name = "periodStartDate")
+            @Column(name = "period_start_date")
             var periodStartDate: String,
 
-            @Column(name = "periodEndDate")
+            @Column(name = "period_end_date")
             var periodEndDate: String,
 
             @Column(name = "paid")
@@ -84,10 +84,10 @@ object InvoiceSchemaV1 : MappedSchema(
             @Column(name = "active")
             var active: String,
 
-            @Column(name = "createdAt")
+            @Column(name = "created_at")
             var createdAt: String,
 
-            @Column(name = "lastUpdated")
+            @Column(name = "last_updated")
             var lastUpdated: String,
 
             @Column(name = "linear_id")

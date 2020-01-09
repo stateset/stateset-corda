@@ -23,15 +23,15 @@ object ContactSchema
 object ContactSchemaV1 : MappedSchema(ContactSchema.javaClass, 1, listOf(PersistentContact::class.java)) {
     @Entity
     @Table(name = "contact_states", indexes = arrayOf(Index(name = "idx_contact_controller", columnList = "controller"),
-            Index(name = "idx_contact_lastName", columnList = "lastName")))
+            Index(name = "idx_contact_last_name", columnList = "last_name")))
     class PersistentContact(
-            @Column(name = "contactId")
+            @Column(name = "contact_id")
             var contactId: String,
 
-            @Column(name = "firstName")
+            @Column(name = "first_name")
             var firstName: String,
 
-            @Column(name = "lastName")
+            @Column(name = "last_name")
             var lastName: String,
 
             @Column(name = "phone")
@@ -46,7 +46,7 @@ object ContactSchemaV1 : MappedSchema(ContactSchema.javaClass, 1, listOf(Persist
             @Column(name = "processor")
             var processor: String,
 
-            @Column(name = "linearId")
+            @Column(name = "linear_id")
             var linearId: String
 
     ) : PersistentState() {

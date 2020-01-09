@@ -32,25 +32,25 @@ object ApprovalSchemaV1 : MappedSchema(
     @Entity
     @Table(name = "approval_states")
     class PersistentApproval(
-            @Column(name = "approvalId")
+            @Column(name = "approval_id")
             var approvalId: String,
 
-            @Column(name = "approvalName")
+            @Column(name = "approval_name")
             var approvalName: String,
 
             @Column(name = "industry")
             var industry: String,
 
-            @Column(name = "approvalStatus")
+            @Column(name = "approval_status")
             var approvalStatus: String,
 
-            @Column(name = "agent")
-            var agent: String,
+            @Column(name = "submitter")
+            var submitter: String,
 
-            @Column(name = "provider")
-            var provider: String,
+            @Column(name = "approver")
+            var approver: String,
 
-            @Column(name = "linearId")
+            @Column(name = "linear_id")
             var linearId: String
     ) : PersistentState() {
         @Suppress("UNUSED")
@@ -59,8 +59,8 @@ object ApprovalSchemaV1 : MappedSchema(
                 approvalName = "",
                 industry = "",
                 approvalStatus = "",
-                agent = "",
-                provider = "",
+                submitter = "",
+                approver = "",
                 linearId = ""
         )
     }

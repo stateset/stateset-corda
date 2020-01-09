@@ -196,7 +196,6 @@ class StatesetController() {
     }
 
 
-
     /** Maps an Chat to a JSON object. */
 
     private fun Chat.Message.toJson(): Map<String, String> {
@@ -239,7 +238,7 @@ class StatesetController() {
     /** Returns a list of existing Messages. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping( "/getMessages", produces = arrayOf("approval/json"))
+    @GetMapping("/getMessages", produces = arrayOf("approval/json"))
     @ApiOperation(value = "Get Baton Messages")
     fun getMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Chat.Message>().states
@@ -343,8 +342,6 @@ class StatesetController() {
     }
 
 
-
-
     /** Returns a list of existing Contacts. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
@@ -357,8 +354,6 @@ class StatesetController() {
     }
 
 
-
-
     /** Returns a list of existing Leads. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
@@ -369,7 +364,6 @@ class StatesetController() {
         val leadStates = leadStateAndRefs.map { it.state.data }
         return leadStates.map { it.toJson() }
     }
-
 
 
     /** Returns a list of existing Cases. */
@@ -622,19 +616,17 @@ class StatesetController() {
     }
 
 
-
-
     /** Creates an Approval. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
     @PostMapping("/createApproval")
     @ApiOperation(value = "Create Approval")
     fun createApproval(@PathVariable nodeName: Optional<String>,
-                   @RequestParam("approvalId") approvalId: String,
-                   @RequestParam("approvalName") approvalName: String,
-                   @RequestParam("industry") industry: String,
-                   @RequestParam("approvalStatus") approvalStatus: String,
-                   @RequestParam("partyName") partyName: String?): ResponseEntity<Any?> {
+                       @RequestParam("approvalId") approvalId: String,
+                       @RequestParam("approvalName") approvalName: String,
+                       @RequestParam("industry") industry: String,
+                       @RequestParam("approvalStatus") approvalStatus: String,
+                       @RequestParam("partyName") partyName: String?): ResponseEntity<Any?> {
 
 
         if (partyName == null) {
@@ -658,9 +650,6 @@ class StatesetController() {
         }
         return ResponseEntity<Any?>(message, status)
     }
-
-
-
 
 
     /** Approve Approval. */
@@ -984,25 +973,20 @@ class StatesetController() {
         }
     }
 
-}
-
-
-/*
-
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
     @PostMapping(value = "/createInvoice")
     @ApiOperation(value = "Create Invoice")
     fun createInvoice(@PathVariable nodeName: Optional<String>,
-                        @RequestParam("invoiceNumber") invoiceNumber: String,
-                        @RequestParam("invoiceName") invoiceName: String,
-                        @RequestParam("billingReason") billingReason: String,
-                        @RequestParam("amountDue") amountDue: Int,
-                        @RequestParam("amountPaid") amountPaid: Int,
-                        @RequestParam("amountRemaining") amountRemaining: Int,
-                        @RequestParam("periodStartDate") periodStartDate: String,
-                        @RequestParam("periodEndDate") periodEndDate: String,
-                        @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
+                      @RequestParam("invoiceNumber") invoiceNumber: String,
+                      @RequestParam("invoiceName") invoiceName: String,
+                      @RequestParam("billingReason") billingReason: String,
+                      @RequestParam("amountDue") amountDue: Int,
+                      @RequestParam("amountPaid") amountPaid: Int,
+                      @RequestParam("amountRemaining") amountRemaining: Int,
+                      @RequestParam("periodStartDate") periodStartDate: String,
+                      @RequestParam("periodEndDate") periodEndDate: String,
+                      @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
 
 
         if (nodeName == null) {
@@ -1034,9 +1018,50 @@ class StatesetController() {
         return ResponseEntity<Any?>(message, status)
     }
 
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping(value = "/createLoan")
+    @ApiOperation(value = "Create Loan")
+    fun createLoan(@PathVariable nodeName: Optional<String>,
+                   @RequestParam("loanNumber") loanNumber: String,
+                   @RequestParam("loanName") loanName: String,
+                   @RequestParam("loanReason") loanReason: String,
+                   @RequestParam("amountDue") amountDue: Int,
+                   @RequestParam("amountPaid") amountPaid: Int,
+                   @RequestParam("amountRemaining") amountRemaining: Int,
+                   @RequestParam("periodStartDate") periodStartDate: String,
+                   @RequestParam("periodEndDate") periodEndDate: String,
+                   @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
 
-*/
 
+        if (nodeName == null) {
+            return ResponseEntity.status(TSResponse.BAD_REQUEST).body("Query parameter 'counterPartyName' missing or has wrong format.\n")
+        }
+
+
+        if (counterpartyName == null) {
+            return ResponseEntity.status(TSResponse.BAD_REQUEST).body("Query parameter 'counterPartyName' missing or has wrong format.\n")
+        }
+
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).createLoan(loanNumber, loanName, loanReason, amountDue, amountPaid, amountRemaining, periodStartDate, periodEndDate, counterpartyName)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "loanNumber" to "$loanNumber",
+                    "party" to "$nodeName",
+                    "counterpartyName" to "$counterpartyName"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error sending Invoice to ${counterpartyName}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+}
 
 /*
 

@@ -14,11 +14,7 @@
  *    limitations under the License.
  */
 
-
 package io.stateset.case
-
-
-
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -32,35 +28,33 @@ import javax.persistence.Table
 // * Schema *
 // *********
 
-
 object CaseSchema
 
 /**
- * First version of an [LeadSchema] schema.
+ * First version of an [CaseSchema] schema.
  */
-
 
 object CaseSchemaV1 : MappedSchema(schemaFamily = CaseSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCase::class.java)) {
     @Entity
     @Table(name = "case_states", indexes = arrayOf(Index(name = "idx_case_resolver", columnList = "resolver"),
-            Index(name = "idx_case_caseId", columnList = "caseId")))
+            Index(name = "idx_case_case_id", columnList = "case_id")))
     class PersistentCase(
-            @Column(name = "caseId")
+            @Column(name = "case_id")
             var caseId: String,
 
-            @Column(name = "caseName")
+            @Column(name = "case_name")
             var caseName: String,
 
-            @Column(name = "caseNumber")
+            @Column(name = "case_number")
             var caseNumber: String,
 
             @Column(name = "description")
             var description: String,
 
-            @Column(name = "caseStatus")
+            @Column(name = "case_status")
             var caseStatus: String,
 
-            @Column(name = "casePriority")
+            @Column(name = "case_priority")
             var casePriority: String,
 
             @Column(name = "submitter")
@@ -69,7 +63,7 @@ object CaseSchemaV1 : MappedSchema(schemaFamily = CaseSchema.javaClass, version 
             @Column(name = "resolver")
             var resolver: String,
 
-            @Column(name = "linearId")
+            @Column(name = "linear_id")
             var linearId: String
 
 
