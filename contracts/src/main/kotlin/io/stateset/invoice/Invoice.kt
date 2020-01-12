@@ -36,11 +36,11 @@ import java.util.*
 data class Invoice(val invoiceNumber: String,
                    val invoiceName: String,
                    val billingReason: String,
-                   val amountDue: Amount<Currency>,
-                   val amountPaid: Amount<Currency> = Amount(0, amountDue.token),
-                   val amountRemaining: Amount<Currency> = Amount(0, amountPaid.token),
-                   val subtotal: Amount<Currency> = Amount(0, amountDue.token),
-                   val total: Amount<Currency> = Amount(0, subtotal.token),
+                   val amountDue: Int,
+                   val amountPaid: Int,
+                   val amountRemaining: Int,
+                   val subtotal: Int,
+                   val total: Int,
                    val party: Party,
                    val counterparty: Party,
                    val dueDate: String,
@@ -53,7 +53,6 @@ data class Invoice(val invoiceNumber: String,
                    override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
 
     override val participants: List<AbstractParty> get() = listOf(party, counterparty)
-    fun pay(amountToPay: Amount<Currency>) = copy(amountDue = amountDue + amountToPay)
 
     override fun toString(): String {
         val partyString = (party as? Party)?.name?.organisation ?: party.owningKey.toBase58String()
@@ -129,7 +128,6 @@ class InvoiceContract : Contract {
 
                 val invoiceOutput = invoiceOutputs.single()
                 "the party should be different to the counterparty" using (invoiceOutput.party != invoiceOutput.counterparty)
-                //"the total should be greater than 0" using (invoiceOutput.total)
 
                 "the party and counterparty are required signers" using
                         (invoiceCommand.signers.containsAll(listOf(invoiceOutput.party.owningKey, invoiceOutput.counterparty.owningKey)))

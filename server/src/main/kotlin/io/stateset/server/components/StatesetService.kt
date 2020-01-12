@@ -23,6 +23,8 @@ import io.stateset.agreement.AgreementStatus
 import io.stateset.agreement.AgreementType
 import io.stateset.case.CasePriority
 import io.stateset.case.CaseStatus
+import io.stateset.loan.LoanStatus
+import io.stateset.loan.LoanType
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -241,7 +243,7 @@ class StatesetService(
     }
 
     /** Create an Invoice! */
-    fun createInvoice(invoiceNumber: String, invoiceName: String, billingReason: String, amountDue: Int, amountPaid: Int, amountRemaining: Int, periodStartDate: String, periodEndDate: String, counterpartyName: String): SignedTransaction {
+    fun createInvoice(invoiceNumber: String, invoiceName: String, billingReason: String, amountDue: Int, amountPaid: Int, amountRemaining: Int, subtotal: Int, total: Int, dueDate: String, periodStartDate: String, periodEndDate: String, counterpartyName: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
@@ -255,11 +257,11 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateInvoiceFlow.Invoicer::class.java, invoiceNumber, invoiceName, billingReason, amountDue, amountPaid, amountRemaining, periodStartDate, periodEndDate, counterpartyName).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateInvoiceFlow.Invoicer::class.java, invoiceNumber, invoiceName, billingReason, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName).returnValue.getOrThrow()
     }
 
     /** Create a Loan! */
-    fun createLoan(loanNumber: String, loanName: String, loanReason: String, amountDue: Int, amountPaid: Int, amountRemaining: Int, periodStartDate: String, periodEndDate: String, counterpartyName: String): SignedTransaction {
+    fun createLoan(loanNumber: String, loanName: String, loanReason: String, loanStatus: LoanStatus, loanType: LoanType,  amountDue: Int, amountPaid: Int, amountRemaining: Int, subtotal: Int, total: Int, dueDate: String, periodStartDate: String, periodEndDate: String, counterpartyName: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
@@ -273,6 +275,6 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateLoanFlow.Loaner::class.java, loanNumber, loanName, loanReason, amountDue, amountPaid, amountRemaining, periodStartDate, periodEndDate, counterpartyName).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateLoanFlow.Loaner::class.java, loanNumber, loanName, loanReason, loanStatus, loanType, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName).returnValue.getOrThrow()
     }
 }

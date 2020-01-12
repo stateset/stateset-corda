@@ -42,6 +42,9 @@ import io.stateset.contact.*
 import io.stateset.chat.*
 import io.stateset.invoice.Invoice
 import io.stateset.lead.*
+import io.stateset.loan.Loan
+import io.stateset.loan.LoanStatus
+import io.stateset.loan.LoanType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -234,6 +237,31 @@ class StatesetController() {
         )
     }
 
+    private fun Loan.toJson(): Map<String, String> {
+        return kotlin.collections.mapOf(
+                "loanNumber" to loanNumber,
+                "loanName" to loanName,
+                "loanReason" to loanReason,
+                "loanStatus" to loanStatus.toString(),
+                "loanType" to loanType.toString(),
+                "amountDue" to amountDue.toString(),
+                "amountPaid" to amountPaid.toString(),
+                "amountRemaining" to amountRemaining.toString(),
+                "subtotal" to subtotal.toString(),
+                "total" to total.toString(),
+                "party" to party.toString(),
+                "counterparty" to counterparty.toString(),
+                "dueDate" to dueDate,
+                "periodStartDate" to periodStartDate,
+                "periodEndDate" to periodEndDate,
+                "paid" to paid.toString(),
+                "active" to active.toString(),
+                "createdAt" to createdAt.toString(),
+                "lastUpdated" to lastUpdated.toString(),
+                "linerId" to linearId.toString()
+        )
+    }
+
 
     /** Returns a list of existing Messages. */
 
@@ -365,7 +393,6 @@ class StatesetController() {
         return leadStates.map { it.toJson() }
     }
 
-
     /** Returns a list of existing Cases. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
@@ -375,6 +402,30 @@ class StatesetController() {
         val caseStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Case::class.java).states
         val caseStates = caseStateAndRefs.map { it.state.data }
         return caseStates.map { it.toJson() }
+    }
+
+
+    /** Returns a list of existing Invoices */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @GetMapping(value = "/getInvoices")
+    @ApiOperation(value = "Get Invoices")
+    fun getInvoices(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
+        val invoiceStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Invoice::class.java).states
+        val invoiceStates = invoiceStateAndRefs.map { it.state.data }
+        return invoiceStates.map { it.toJson() }
+    }
+
+
+    /** Returns a list of existing Agreements. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @GetMapping(value = "/getLoans")
+    @ApiOperation(value = "Get Loans")
+    fun getLoans(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
+        val loanStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Loan::class.java).states
+        val loanStates = loanStateAndRefs.map { it.state.data }
+        return loanStates.map { it.toJson() }
     }
 
 
@@ -753,9 +804,7 @@ class StatesetController() {
                         @RequestParam("agreementType") agreementType: AgreementType,
                         @RequestParam("totalAgreementValue") totalAgreementValue: Int,
                         @RequestParam("agreementStartDate") agreementStartDate: String,
-            // @DateTimeFormat(pattern = "yyyy-MM-dd", iso = DateTimeFormat.ISO.DATE_TIME)
                         @RequestParam("agreementEndDate") agreementEndDate: String,
-            // @DateTimeFormat(pattern = "yyyy-MM-dd", iso = DateTimeFormat.ISO.DATE_TIME)
                         @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
 
 
@@ -973,6 +1022,11 @@ class StatesetController() {
         }
     }
 
+    /** Creates an Invoice. */
+
+    /** Searchable PDF is mapped by invoice linearId **/
+    /** Endpoint setup in BaaR OCR tool and State is created **/
+
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
     @PostMapping(value = "/createInvoice")
@@ -984,6 +1038,9 @@ class StatesetController() {
                       @RequestParam("amountDue") amountDue: Int,
                       @RequestParam("amountPaid") amountPaid: Int,
                       @RequestParam("amountRemaining") amountRemaining: Int,
+                      @RequestParam("subtotal") subtotal: Int,
+                      @RequestParam("total") total: Int,
+                      @RequestParam("dueDate") dueDate: String,
                       @RequestParam("periodStartDate") periodStartDate: String,
                       @RequestParam("periodEndDate") periodEndDate: String,
                       @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
@@ -1002,10 +1059,20 @@ class StatesetController() {
 
         val (status, message) = try {
 
-            val result = getService(nodeName).createInvoice(invoiceNumber, invoiceName, billingReason, amountDue, amountPaid, amountRemaining, periodStartDate, periodEndDate, counterpartyName)
+            val result = getService(nodeName).createInvoice(invoiceNumber, invoiceName, billingReason, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName)
 
             HttpStatus.CREATED to mapOf<String, String>(
                     "invoiceNumber" to "$invoiceNumber",
+                    "party" to "$nodeName",
+                    "counterpartyName" to "$counterpartyName",
+                    "amountDue" to "$amountDue",
+                    "amountPaid" to "$amountPaid",
+                    "amountRemaining" to "$amountRemaining",
+                    "subtotal" to "$subtotal",
+                    "total" to "$total",
+                    "dueDate" to "$dueDate",
+                    "periodStartDate" to "$periodStartDate",
+                    "periodEndDate" to "$periodEndDate",
                     "party" to "$nodeName",
                     "counterpartyName" to "$counterpartyName"
             )
@@ -1025,9 +1092,14 @@ class StatesetController() {
                    @RequestParam("loanNumber") loanNumber: String,
                    @RequestParam("loanName") loanName: String,
                    @RequestParam("loanReason") loanReason: String,
+                   @RequestParam("loanStatus") loanStatus: LoanStatus,
+                   @RequestParam("loanType") loanType: LoanType,
                    @RequestParam("amountDue") amountDue: Int,
                    @RequestParam("amountPaid") amountPaid: Int,
                    @RequestParam("amountRemaining") amountRemaining: Int,
+                   @RequestParam("subtotal") subtotal: Int,
+                   @RequestParam("total") total: Int,
+                   @RequestParam("dueDate") dueDate: String,
                    @RequestParam("periodStartDate") periodStartDate: String,
                    @RequestParam("periodEndDate") periodEndDate: String,
                    @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
@@ -1046,16 +1118,27 @@ class StatesetController() {
 
         val (status, message) = try {
 
-            val result = getService(nodeName).createLoan(loanNumber, loanName, loanReason, amountDue, amountPaid, amountRemaining, periodStartDate, periodEndDate, counterpartyName)
+            val result = getService(nodeName).createLoan(loanNumber, loanName, loanReason, loanStatus, loanType, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName)
 
             HttpStatus.CREATED to mapOf<String, String>(
                     "loanNumber" to "$loanNumber",
+                    "loanName" to "$loanName",
+                    "loanStatus" to "$loanStatus",
+                    "loanType" to "$loanType",
+                    "amountDue" to "$amountDue",
+                    "amountPaid" to "$amountPaid",
+                    "amountRemaining" to "$amountRemaining",
+                    "subtotal" to "$subtotal",
+                    "total" to "$total",
+                    "dueDate" to "$dueDate",
+                    "periodStartDate" to "$periodStartDate",
+                    "periodEndDate" to "$periodEndDate",
                     "party" to "$nodeName",
                     "counterpartyName" to "$counterpartyName"
             )
 
         } catch (e: Exception) {
-            logger.error("Error sending Invoice to ${counterpartyName}", e)
+            logger.error("Error sending Loan to ${counterpartyName}", e)
             e.printStackTrace()
             HttpStatus.BAD_REQUEST to e.message
         }

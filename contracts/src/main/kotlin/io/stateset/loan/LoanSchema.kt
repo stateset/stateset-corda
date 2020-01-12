@@ -1,5 +1,3 @@
-package io.stateset.loan
-
 /**
  *   Copyright 2020, Stateset.
  *
@@ -15,6 +13,8 @@ package io.stateset.loan
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
+package io.stateset.loan
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -47,6 +47,12 @@ object LoanSchemaV1 : MappedSchema(
 
             @Column(name = "loan_reason")
             var loanReason: String,
+
+            @Column(name = "loan_status")
+            var loanStatus: String,
+
+            @Column(name = "loan_type")
+            var loanType: String,
 
             @Column(name = "amount_due")
             var amountDue: String,
@@ -96,6 +102,6 @@ object LoanSchemaV1 : MappedSchema(
             @Column(name = "external_Id")
             var externalId: String
     ) : PersistentState() {
-        constructor() : this("default-constructor-required-for-hibernate", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
+        constructor() : this("default-constructor-required-for-hibernate", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
     }
 }

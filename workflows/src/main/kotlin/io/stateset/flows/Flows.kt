@@ -25,6 +25,10 @@ import io.stateset.invoice.Invoice
 import io.stateset.invoice.InvoiceContract
 import io.stateset.invoice.InvoiceContract.Companion.INVOICE_CONTRACT_ID
 import io.stateset.loan.Loan
+import io.stateset.loan.LoanContract
+import io.stateset.loan.LoanContract.Companion.LOAN_CONTRACT_ID
+import io.stateset.loan.LoanStatus
+import io.stateset.loan.LoanType
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -1298,7 +1302,7 @@ class ApproveFlow(val approvalId: String) : FlowLogic<SignedTransaction>() {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be an Agreement transaction." using (output is Approval)
+                    "This must be an Approval transaction." using (output is Approval)
                     val approval = output as Approval
                     val approvalStatus = ApprovalStatus.APPROVED
                 }
@@ -1364,7 +1368,7 @@ class RejectFlow(val approvalId: String) : FlowLogic<SignedTransaction>() {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be an Agreement transaction." using (output is Approval)
+                    "This must be an Approval transaction." using (output is Approval)
                     val approval = output as Approval
                     val approvalStatus = ApprovalStatus.REJECTED
                 }
@@ -1388,18 +1392,14 @@ object CreateInvoiceFlow {
     class Invoicer(val invoiceNumber: String,
                    val invoiceName: String,
                    val billingReason: String,
-                   val amountDue: Amount<Currency>,
-                   val amountPaid: Amount<Currency>,
-                   val amountRemaining: Amount<Currency>,
-                   val subtotal: Amount<Currency>,
-                   val total: Amount<Currency>,
+                   val amountDue: Int,
+                   val amountPaid: Int,
+                   val amountRemaining: Int,
+                   val subtotal: Int,
+                   val total: Int,
                    val dueDate: String,
                    val periodStartDate: String,
                    val periodEndDate: String,
-                   val paid: Boolean?,
-                   val active: Boolean?,
-                   val createdAt: String?,
-                   val lastUpdated: String?,
                    val otherParty: Party) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -1445,13 +1445,13 @@ object CreateInvoiceFlow {
             val formatted = time.format(formatter)
             val createdAt = formatted
             val lastUpdated = formatted
-            val agreementReference = serviceHub.vaultService.queryBy<Agreement>().states.single()
-            val reference = agreementReference.referenced()
+            // val agreementReference = serviceHub.vaultService.queryBy<Agreement>().states.single()
+            // val reference = agreementReference.referenced()
             val invoiceState = Invoice(invoiceNumber, invoiceName, billingReason, amountDue, amountPaid, amountRemaining, subtotal, total, me, otherParty, dueDate, periodStartDate, periodEndDate, paid, active, createdAt, lastUpdated)
             val txCommand = Command(InvoiceContract.Commands.CreateInvoice(), invoiceState.participants.map { it.owningKey })
             progressTracker.currentStep = VERIFYING_TRANSACTION
             val txBuilder = TransactionBuilder(notary)
-                    .addReferenceState(reference)
+                    // .addReferenceState(reference)
                     .addOutputState(invoiceState, INVOICE_CONTRACT_ID)
                     .addCommand(txCommand)
 
@@ -1478,6 +1478,7 @@ object CreateInvoiceFlow {
                     val output = stx.tx.outputs.single().data
                     "This must be an Invoice transaction." using (output is Invoice)
                     val invoice = output as Invoice
+                    "I won't accept Invoices with a value under 100." using (invoice.total >= 100)
                 }
             }
 
@@ -1499,21 +1500,19 @@ object CreateLoanFlow {
     @InitiatingFlow
     @Suspendable
     class Loaner(val loanNumber: String,
-                   val loanName: String,
-                   val loanReason: String,
-                   val amountDue: Amount<Currency>,
-                   val amountPaid: Amount<Currency>,
-                   val amountRemaining: Amount<Currency>,
-                   val subtotal: Amount<Currency>,
-                   val total: Amount<Currency>,
-                   val dueDate: String,
-                   val periodStartDate: String,
-                   val periodEndDate: String,
-                   val paid: Boolean?,
-                   val active: Boolean?,
-                   val createdAt: String?,
-                   val lastUpdated: String?,
-                   val otherParty: Party) : FlowLogic<SignedTransaction>() {
+                 val loanName: String,
+                 val loanReason: String,
+                 val loanStatus: LoanStatus,
+                 val loanType: LoanType,
+                 val amountDue: Int,
+                 val amountPaid: Int,
+                 val amountRemaining: Int,
+                 val subtotal: Int,
+                 val total: Int,
+                 val dueDate: String,
+                 val periodStartDate: String,
+                 val periodEndDate: String,
+                 val otherParty: Party) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new Agreement.")
@@ -1558,14 +1557,14 @@ object CreateLoanFlow {
             val formatted = time.format(formatter)
             val createdAt = formatted
             val lastUpdated = formatted
-            val agreementReference = serviceHub.vaultService.queryBy<Agreement>().states.single()
-            val reference = agreementReference.referenced()
-            val loanState = Invoice(loanNumber, loanName, loanReason, amountDue, amountPaid, amountRemaining, subtotal, total, me, otherParty, dueDate, periodStartDate, periodEndDate, paid, active, createdAt, lastUpdated)
-            val txCommand = Command(InvoiceContract.Commands.CreateInvoice(), loanState.participants.map { it.owningKey })
+            // val agreementReference = serviceHub.vaultService.queryBy<Agreement>().states.single()
+            // val reference = agreementReference.referenced()
+            val loanState = Loan(loanNumber, loanName, loanReason, loanStatus, loanType, amountDue, amountPaid, amountRemaining, subtotal, total, me, otherParty, dueDate, periodStartDate, periodEndDate, paid, active, createdAt, lastUpdated)
+            val txCommand = Command(LoanContract.Commands.CreateLoan(), loanState.participants.map { it.owningKey })
             progressTracker.currentStep = VERIFYING_TRANSACTION
             val txBuilder = TransactionBuilder(notary)
-                    .addReferenceState(reference)
-                    .addOutputState(loanState, INVOICE_CONTRACT_ID)
+                    // .addReferenceState(reference)
+                    .addOutputState(loanState, LOAN_CONTRACT_ID)
                     .addCommand(txCommand)
 
             txBuilder.verify(serviceHub)
@@ -1590,7 +1589,8 @@ object CreateLoanFlow {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
                     "This must be an Loan transaction." using (output is Loan)
-                    val loan = output as Invoice
+                    val loan = output as Loan
+                    "I won't accept Loans with a value under 100." using (loan.total >= 100)
                 }
             }
 
