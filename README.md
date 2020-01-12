@@ -33,11 +33,11 @@ Stateset is a financial network for digital commerce working capital automation.
 ### Stateset Network Setup
 
 
-1) Install the Stateset locally via Git:
+1) Install the Stateset Network locally via Git:
 
 ```bash
 
-git clone https://github.com/stateset/stateset
+git clone https://gitlab.com/stateset/stateset-cordapp
 
 ```
 
@@ -78,7 +78,7 @@ To change the name of your `organisation` or any other parameters, edit the `nod
 
 Add the following to the `node.conf` file:
 
-`compatibilityZoneUrl="http://dapps.network:8080"`
+`compatibilityZoneUrl="https://stateset.network:8080"`
 
 This is the current network map and doorman server URL
 
@@ -88,7 +88,7 @@ This is the current network map and doorman server URL
 
 cd build
 cd nodes
-cd Dapps
+cd PartyA
 rm -rf persistence.mv.db nodeInfo-* network-parameters certificates additional-node-infos
 
 ```
@@ -97,7 +97,7 @@ rm -rf persistence.mv.db nodeInfo-* network-parameters certificates additional-n
 
 ```bash
 
-curl -o /var/tmp/network-truststore.jks http://dsoa.network:8080//network-map/truststore
+curl -o /var/tmp/network-truststore.jks https://stateset.network:8080//network-map/truststore
 
 ```
 
@@ -126,7 +126,7 @@ Configuration
 - JVM or Kubernetes
 
 
-### CRM Network States
+### Network States
 
 Customer States are transferred between stakeholders on the network.
 
