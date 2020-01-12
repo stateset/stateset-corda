@@ -142,12 +142,17 @@ The first state to be deployed on the network is the `Account`. Version 0.1 of t
 
 data class Account(val accountId: String,
                    val accountName: String,
-                   val accountType: String,
+                   val accountType: TypeOfBusiness,
                    val industry: String,
                    val phone: String,
+                   val yearStarted: Int,
+                   val annualRevenue: Double,
+                   val businessAddress: String,
+                   val businessCity: String,
+                   val businessState: String,
+                   val businessZipCode: String,
                    val controller: Party,
-                   val processor: Party,
-                   override val linearId: UniqueIdentifier = UniqueIdentifier())
+                   val processor: Party ) : ContractState, QueryableState {
 
 
 ```
