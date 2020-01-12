@@ -255,3 +255,131 @@ The Case has the following business `flows` that can be called:
 - `CloseCase` - Close the Case with a counterparty
 - `EscalateCase` - Escalate the Case
 
+#### Agreements
+
+
+```jsx
+
+// *****************
+// * Agreement State *
+// *****************
+
+@BelongsToContract(AgreementContract::class)
+data class Agreement(val agreementNumber: String,
+                     val agreementName: String,
+                     val agreementHash: String,
+                     val agreementStatus: AgreementStatus,
+                     val agreementType: AgreementType,
+                     val totalAgreementValue: Int,
+                     val party: Party,
+                     val counterparty: Party,
+                     val agreementStartDate: String,
+                     val agreementEndDate: String,
+                     val active: Boolean?,
+                     val createdAt: String?,
+                     val lastUpdated: String?,
+                     override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+
+```
+
+The Agreement has the following business `flows` that can be called:
+
+- `CreateAgreement` - Create an Agreement between your organization and a known counterparty on the DSOA
+- `ActivateAgreement` - Activate the Agreement between your organization and a counterparty on the DSOA
+- `TerminateAgreement` - Terminate an existing or active agreement
+- `RenewAgreement` - Renew an existing agreement that is or is about to expire
+- `ExpireAgreement` - Expire a currently active agreement between you and a counterparty
+
+The `Agreement Status` and `Agreement Type` enums are listed as follows:
+
+```jsx
+
+
+@CordaSerializable
+enum class AgreementStatus {
+    REQUEST, APPROVAL_REQUIRED, APPROVED, IN_REVIEW, ACTIVATED, INEFFECT, REJECTED, RENEWED, TERMINATED, AMENDED, SUPERSEDED, EXPIRED
+}
+
+@CordaSerializable
+enum class AgreementType {
+    NDA, MSA, SLA, SOW
+}
+
+```
+
+
+
+```jsx
+
+
+// *****************
+// * Loan State *
+// *****************
+
+@BelongsToContract(LoanContract::class)
+data class Loan(val loanNumber: String,
+                val loanName: String,
+                val loanReason: String,
+                val loanStatus: LoanStatus,
+                val loanType: LoanType,
+                val amountDue: Int,
+                val amountPaid: Int,
+                val amountRemaining: Int,
+                val subtotal: Int,
+                val total: Int,
+                val party: Party,
+                val counterparty: Party,
+                val dueDate: String,
+                val periodStartDate: String,
+                val periodEndDate: String,
+                val paid: Boolean?,
+                val active: Boolean?,
+                val createdAt: String?,
+                val lastUpdated: String?,
+                override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+
+```
+
+The Loan has the following business `flows` that can be called:
+
+- `CreateLoan` - Create a Loan between your organization and a known counterparty
+- `PayLoan` - Pay off a Loan
+
+
+```jsx
+
+
+// *****************
+// * Invoice State *
+// *****************
+
+@BelongsToContract(InvoiceContract::class)
+data class Invoice(val invoiceNumber: String,
+                   val invoiceName: String,
+                   val billingReason: String,
+                   val amountDue: Int,
+                   val amountPaid: Int,
+                   val amountRemaining: Int,
+                   val subtotal: Int,
+                   val total: Int,
+                   val party: Party,
+                   val counterparty: Party,
+                   val dueDate: String,
+                   val periodStartDate: String,
+                   val periodEndDate: String,
+                   val paid: Boolean?,
+                   val active: Boolean?,
+                   val createdAt: String?,
+                   val lastUpdated: String?,
+                   override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+
+```
+
+The Invoice has the following business `flows` that can be called:
+
+- `CreateInvoice` - Create a Invoice between your organization and a known counterparty
+- `PayInvoice` - Pay an Invoice
+- `FactorInvoice` - Factor an Invoice
