@@ -308,7 +308,7 @@ enum class AgreementType {
 
 ```
 
-
+#### Loans
 
 ```jsx
 
@@ -347,6 +347,8 @@ The Loan has the following business `flows` that can be called:
 - `CreateLoan` - Create a Loan between your organization and a known counterparty
 - `PayLoan` - Pay off a Loan
 
+
+#### Invoices
 
 ```jsx
 
