@@ -1,6 +1,34 @@
 # Stateset
 
-Stateset is a financial network for working capital automation.
+Stateset is a financial network for digital commerce working capital automation.
+
+```
+	   8 Node Network Graph | 28 Edges | 1 Notary
+-------------------------------------------------------------------
+
+	 /--------\   /--------\   /--------\                                   
+	|	   | |	        | |          |                  
+	|  PartyB  | |  PartyC  | |  PartyD  | 
+	|          | |	   	| |          |                   
+ 	 \--------/   \--------/   \--------/
+
+ /--------\	      /--------\	   /--------\
+|	   |	     |	        |	  |	     |
+|  PartyA  |	     |  Notary  |	  |  PartyE  | 
+|	   |	     |	        |	  |	     | 
+ \--------/	      \--------/           \--------/
+
+	 /--------\   /--------\   /--------\                                   
+	|	   | |	        | |          |                            
+	|  PartyH  | |  PartyG  | |  PartyF  | 
+	|          | |	        | |          |                             
+ 	 \--------/   \--------/   \--------/
+
+--------------------------------------------------------------------
+
+
+```
+
 
 ### Stateset Network Setup
 
