@@ -1,15 +1,43 @@
 # Stateset
 
-Stateset is a financial network for working capital automation.
+Stateset is a financial network for digital commerce working capital automation.
+
+```
+	   8 Node Network Graph | 28 Edges | 1 Notary
+-------------------------------------------------------------------
+
+	 /--------\   /--------\   /--------\                                   
+	|	   | |	        | |          |                  
+	|  PartyB  | |  PartyC  | |  PartyD  | 
+	|          | |	   	| |          |                   
+ 	 \--------/   \--------/   \--------/
+
+ /--------\	      /--------\	   /--------\
+|	   |	     |	        |	  |	     |
+|  PartyA  |	     |  Notary  |	  |  PartyE  | 
+|	   |	     |	        |	  |	     | 
+ \--------/	      \--------/           \--------/
+
+	 /--------\   /--------\   /--------\                                   
+	|	   | |	        | |          |                            
+	|  PartyH  | |  PartyG  | |  PartyF  | 
+	|          | |	        | |          |                             
+ 	 \--------/   \--------/   \--------/
+
+--------------------------------------------------------------------
+
+
+```
+
 
 ### Stateset Network Setup
 
 
-1) Install the Stateset locally via Git:
+1) Install the Stateset Network locally via Git:
 
 ```bash
 
-git clone https://github.com/stateset/stateset
+git clone https://gitlab.com/stateset/stateset-cordapp
 
 ```
 
@@ -50,7 +78,7 @@ To change the name of your `organisation` or any other parameters, edit the `nod
 
 Add the following to the `node.conf` file:
 
-`compatibilityZoneUrl="http://dapps.network:8080"`
+`compatibilityZoneUrl="https://stateset.network:8080"`
 
 This is the current network map and doorman server URL
 
@@ -60,7 +88,7 @@ This is the current network map and doorman server URL
 
 cd build
 cd nodes
-cd Dapps
+cd PartyA
 rm -rf persistence.mv.db nodeInfo-* network-parameters certificates additional-node-infos
 
 ```
@@ -69,7 +97,7 @@ rm -rf persistence.mv.db nodeInfo-* network-parameters certificates additional-n
 
 ```bash
 
-curl -o /var/tmp/network-truststore.jks http://dsoa.network:8080//network-map/truststore
+curl -o /var/tmp/network-truststore.jks https://stateset.network:8080//network-map/truststore
 
 ```
 
@@ -98,7 +126,7 @@ Configuration
 - JVM or Kubernetes
 
 
-### CRM Network States
+### Network States
 
 Customer States are transferred between stakeholders on the network.
 
@@ -114,12 +142,17 @@ The first state to be deployed on the network is the `Account`. Version 0.1 of t
 
 data class Account(val accountId: String,
                    val accountName: String,
-                   val accountType: String,
+                   val accountType: TypeOfBusiness,
                    val industry: String,
                    val phone: String,
+                   val yearStarted: Int,
+                   val annualRevenue: Double,
+                   val businessAddress: String,
+                   val businessCity: String,
+                   val businessState: String,
+                   val businessZipCode: String,
                    val controller: Party,
-                   val processor: Party,
-                   override val linearId: UniqueIdentifier = UniqueIdentifier())
+                   val processor: Party ) : ContractState, QueryableState {
 
 
 ```
@@ -227,3 +260,133 @@ The Case has the following business `flows` that can be called:
 - `CloseCase` - Close the Case with a counterparty
 - `EscalateCase` - Escalate the Case
 
+#### Agreements
+
+
+```jsx
+
+// *****************
+// * Agreement State *
+// *****************
+
+@BelongsToContract(AgreementContract::class)
+data class Agreement(val agreementNumber: String,
+                     val agreementName: String,
+                     val agreementHash: String,
+                     val agreementStatus: AgreementStatus,
+                     val agreementType: AgreementType,
+                     val totalAgreementValue: Int,
+                     val party: Party,
+                     val counterparty: Party,
+                     val agreementStartDate: String,
+                     val agreementEndDate: String,
+                     val active: Boolean?,
+                     val createdAt: String?,
+                     val lastUpdated: String?,
+                     override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+
+```
+
+The Agreement has the following business `flows` that can be called:
+
+- `CreateAgreement` - Create an Agreement between your organization and a known counterparty on the DSOA
+- `ActivateAgreement` - Activate the Agreement between your organization and a counterparty on the DSOA
+- `TerminateAgreement` - Terminate an existing or active agreement
+- `RenewAgreement` - Renew an existing agreement that is or is about to expire
+- `ExpireAgreement` - Expire a currently active agreement between you and a counterparty
+
+The `Agreement Status` and `Agreement Type` enums are listed as follows:
+
+```jsx
+
+
+@CordaSerializable
+enum class AgreementStatus {
+    REQUEST, APPROVAL_REQUIRED, APPROVED, IN_REVIEW, ACTIVATED, INEFFECT, REJECTED, RENEWED, TERMINATED, AMENDED, SUPERSEDED, EXPIRED
+}
+
+@CordaSerializable
+enum class AgreementType {
+    NDA, MSA, SLA, SOW
+}
+
+```
+
+#### Loans
+
+```jsx
+
+
+// *****************
+// * Loan State *
+// *****************
+
+@BelongsToContract(LoanContract::class)
+data class Loan(val loanNumber: String,
+                val loanName: String,
+                val loanReason: String,
+                val loanStatus: LoanStatus,
+                val loanType: LoanType,
+                val amountDue: Int,
+                val amountPaid: Int,
+                val amountRemaining: Int,
+                val subtotal: Int,
+                val total: Int,
+                val party: Party,
+                val counterparty: Party,
+                val dueDate: String,
+                val periodStartDate: String,
+                val periodEndDate: String,
+                val paid: Boolean?,
+                val active: Boolean?,
+                val createdAt: String?,
+                val lastUpdated: String?,
+                override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+
+```
+
+The Loan has the following business `flows` that can be called:
+
+- `CreateLoan` - Create a Loan between your organization and a known counterparty
+- `PayLoan` - Pay off a Loan
+
+
+#### Invoices
+
+```jsx
+
+
+// *****************
+// * Invoice State *
+// *****************
+
+@BelongsToContract(InvoiceContract::class)
+data class Invoice(val invoiceNumber: String,
+                   val invoiceName: String,
+                   val billingReason: String,
+                   val amountDue: Int,
+                   val amountPaid: Int,
+                   val amountRemaining: Int,
+                   val subtotal: Int,
+                   val total: Int,
+                   val party: Party,
+                   val counterparty: Party,
+                   val dueDate: String,
+                   val periodStartDate: String,
+                   val periodEndDate: String,
+                   val paid: Boolean?,
+                   val active: Boolean?,
+                   val createdAt: String?,
+                   val lastUpdated: String?,
+                   override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+
+```
+
+The Invoice has the following business `flows` that can be called:
+
+- `CreateInvoice` - Create a Invoice between your organization and a known counterparty
+- `PayInvoice` - Pay an Invoice
+- `FactorInvoice` - Factor an Invoice
