@@ -224,8 +224,8 @@ class StatesetController() {
                 "amountRemaining" to amountRemaining.toString(),
                 "subtotal" to subtotal.toString(),
                 "total" to total.toString(),
-                "party" to party.toString(),
-                "counterparty" to counterparty.toString(),
+                "party" to party.name.organisation,
+                "counterparty" to counterparty.name.organisation,
                 "dueDate" to dueDate,
                 "periodStartDate" to periodStartDate,
                 "periodEndDate" to periodEndDate,
@@ -233,7 +233,7 @@ class StatesetController() {
                 "active" to active.toString(),
                 "createdAt" to createdAt.toString(),
                 "lastUpdated" to lastUpdated.toString(),
-                "linerId" to linearId.toString()
+                "linearId" to linearId.toString()
         )
     }
 
@@ -249,8 +249,8 @@ class StatesetController() {
                 "amountRemaining" to amountRemaining.toString(),
                 "subtotal" to subtotal.toString(),
                 "total" to total.toString(),
-                "party" to party.toString(),
-                "counterparty" to counterparty.toString(),
+                "party" to party.name.organisation,
+                "counterparty" to counterparty.name.organisation,
                 "dueDate" to dueDate,
                 "periodStartDate" to periodStartDate,
                 "periodEndDate" to periodEndDate,
@@ -258,7 +258,7 @@ class StatesetController() {
                 "active" to active.toString(),
                 "createdAt" to createdAt.toString(),
                 "lastUpdated" to lastUpdated.toString(),
-                "linerId" to linearId.toString()
+                "linearId" to linearId.toString()
         )
     }
 
@@ -348,7 +348,7 @@ class StatesetController() {
 
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping("/getApplications")
+    @GetMapping("/getApprovals")
     @ApiOperation(value = "Get Approvals")
     fun getApprovals(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val approvalStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Approval::class.java).states
