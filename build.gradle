@@ -119,6 +119,68 @@ cordapp {
     }
 }
 
+task deployDev(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    directory "./build/nodes"
+    nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
+        cordapp project(":contracts")
+        cordapp project(":workflows")
+    }
+    node {
+        name "O=Notary,L=London,C=GB"
+        notary = [validating: true]
+        p2pPort 10002
+        rpcSettings {
+            address("localhost:10003")
+            adminAddress("localhost:10043")
+        }
+        //cordapps = []
+        extraConfig = ['h2Settings.address': 'localhost:12344']
+    }
+    node {
+        name "O=PrincetonCapital,L=Princeton,C=US"
+        p2pPort 10008
+        rpcSettings {
+            address("localhost:10036")
+            adminAddress("localhost:10073")
+        }
+        extraConfig = ['h2Settings.address': 'localhost:12345']
+        rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=StateSet,L=San Mateo,C=US"
+        p2pPort 10011
+        rpcSettings {
+            address("localhost:10030")
+            adminAddress("localhost:10070")
+        }
+        extraConfig = ['h2Settings.address': 'localhost:12346']
+        rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=WhiteHaute,L=Houston,C=US"
+        p2pPort 10014
+        rpcSettings {
+            address("localhost:10012")
+            adminAddress("localhost:10052")
+        }
+        extraConfig = ['h2Settings.address' : 'localhost:12346']
+        rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=SevenTrain,L=Atlanta,C=ES"
+        p2pPort 10017
+        rpcSettings {
+            address("localhost:10015")
+            adminAddress("localhost:10055")
+        }
+
+        extraConfig = ['h2Settings.address' : 'localhost:12348']
+        rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+}
 
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

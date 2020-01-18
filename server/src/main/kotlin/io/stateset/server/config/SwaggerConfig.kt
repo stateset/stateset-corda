@@ -35,7 +35,7 @@ class SwaggerConfig {
 
     protected fun apiInfo(): ApiInfo {
         return ApiInfoBuilder().title("Stateset")
-                .description("A rest API for Stateset nodes using Spring Boot 2").version("0.1").build()
+                .description("A rest API for Stateset using Spring Boot 2").version("0.8").build()
     }
 
 }

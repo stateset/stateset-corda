@@ -19,17 +19,20 @@ package io.stateset.server.components
 import com.github.manosbatsis.corbeans.spring.boot.corda.rpc.NodeRpcConnection
 import com.github.manosbatsis.corbeans.spring.boot.corda.service.CordaNodeServiceImpl
 import io.stateset.*
+import io.stateset.account.TypeOfBusiness
 import io.stateset.agreement.AgreementStatus
 import io.stateset.agreement.AgreementType
+import io.stateset.application.ApplicationStatus
+import io.stateset.approval.ApprovalStatus
 import io.stateset.case.CasePriority
 import io.stateset.case.CaseStatus
 import io.stateset.loan.LoanStatus
 import io.stateset.loan.LoanType
+import io.stateset.message.Message
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.LoggerFactory
-
 
 class StatesetService(
         nodeRpcConnection: NodeRpcConnection
@@ -40,7 +43,7 @@ class StatesetService(
     }
 
     /** Send a Message! */
-    fun sendMessage(to: String, userId: String, message: String): Unit {
+    fun sendMessage(to: String, userId: String, message: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(to, exactMatch = true)
@@ -53,12 +56,11 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(SendMessage::class.java, to, userId, message).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(SendMessageFlow::class.java, to, userId, message).returnValue.getOrThrow()
     }
 
-
-    /** Create an Approval */
-    fun createApproval(approvalId: String, approvalName: String, industry: String, approvalStatus: String, partyName: String): SignedTransaction {
+    /** Create an Application */
+    fun createApplication(applicationId: String, applicationName: String, industry: String, applicationStatus: ApplicationStatus, partyName: String ): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(partyName, exactMatch = true)
@@ -71,7 +73,45 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateAccountFlow.Controller::class.java, approvalId, approvalName, industry, approvalStatus, processor).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateApplicationFlow.Initiator::class.java, applicationId, applicationName, industry, applicationStatus, processor).returnValue.getOrThrow()
+    }
+
+
+    /** Approve an Application! */
+    fun approveApplication(applicationId: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(ApproveApplicationFlow::class.java, applicationId).returnValue.getOrThrow()
+    }
+
+
+
+    /** Reject an Application! */
+    fun rejectApplication(applicationId: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(RejectApplicationFlow::class.java, applicationId).returnValue.getOrThrow()
+    }
+
+
+
+    /** Create an Approval */
+    fun createApproval(approvalId: String, approvalName: String, industry: String, approvalStatus: ApprovalStatus, partyName: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        val matches = proxy.partiesFromName(partyName, exactMatch = true)
+        logger.debug("createAccount, peers: {}", this.peers())
+        logger.debug("createAccount, target: {}, matches: {}", partyName, matches)
+
+        val processor: Party = when {
+            matches.isEmpty() -> throw IllegalArgumentException("Target string \"$partyName\" doesn't match any nodes on the network.")
+            matches.size > 1 -> throw IllegalArgumentException("Target string \"$partyName\"  matches multiple nodes on the network.")
+            else -> matches.single()
+        }
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(CreateApprovalFlow.Initiator::class.java, approvalId, approvalName, industry, approvalStatus, processor).returnValue.getOrThrow()
     }
 
 
@@ -94,7 +134,7 @@ class StatesetService(
 
 
     /** Create an Account! */
-    fun createAccount(accountId: String, accountName: String, accountType: String, industry: String, phone: String, yearStarted: Int, annualRevenue: Double, businessAddress: String, businessCity: String, businessState: String, businessZipCode: String, processor: String): SignedTransaction {
+    fun createAccount(accountId: String, accountName: String, accountType: TypeOfBusiness, industry: String, phone: String, yearStarted: Int, annualRevenue: Double, businessAddress: String, businessCity: String, businessState: String, businessZipCode: String, processor: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(processor, exactMatch = true)
