@@ -48,10 +48,13 @@ import io.stateset.loan.Loan
 import io.stateset.loan.LoanStatus
 import io.stateset.loan.LoanType
 import io.stateset.message.Message
+import io.stateset.message.MessageSchema
+import io.stateset.product.Product
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import org.springframework.core.io.InputStreamResource
 import org.springframework.http.HttpHeaders
 import org.springframework.web.multipart.MultipartFile
@@ -280,6 +283,44 @@ class StatesetController() {
         )
     }
 
+    private fun Product.toJson(): Map<String, String> {
+        return kotlin.collections.mapOf(
+                "id" to id,
+                "name" to name,
+                "description" to description,
+                "product_url" to product_url,
+                "image_url" to image_url,
+                "breadcrumbs" to breadcrumbs,
+                "inventory" to inventory.toString(),
+                "price" to price.toString(),
+                "custom_color" to custom_color,
+                "barcode" to barcode,
+                "inventoryStatus" to inventoryStatus.toString(),
+                "status" to status.toString(),
+                "custom_size" to custom_size,
+                "custom_brand" to custom_brand,
+                "custom_gender" to custom_gender,
+                "group_id" to group_id,
+                "active" to active.toString(),
+                "createdAt" to createdAt,
+                "lastUpdated" to lastUpdated,
+                "party" to party.name.organisation.toString(),
+                "counterparty" to counterparty.name.organisation.toString()
+        )
+    }
+
+    /** Returns a list of Products. */
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @GetMapping("/getProducts")
+    @ApiOperation(value = "Get Products")
+    fun getProducts(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
+        val productStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Product::class.java).states
+        val productStates = productStateAndRefs.map { it.state.data }
+        return productStates.map { it.toJson() }
+    }
+
 
     /** Returns a list of existing Messages. */
 
@@ -324,7 +365,8 @@ class StatesetController() {
     fun getSentMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
         val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
         val messageStates = messageStateAndRefs.map { it.state.data }
-        return messageStates.map { it.toJson() }
+        return messageStates.filter { it.fromMe }
+                .map { it.toJson() }
     }
 
 

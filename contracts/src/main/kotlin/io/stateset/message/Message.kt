@@ -44,7 +44,7 @@ data class Message(val id: UniqueIdentifier,
                    val toUserId: String,
                    val sentReceipt: Boolean?,
                    val deliveredReceipt: Boolean?,
-                   val fromMe: Boolean?,
+                   val fromMe: Boolean,
                    val time: String?,
                    val messageNumber: String,
                    override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState {
