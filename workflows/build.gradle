@@ -10,10 +10,11 @@ cordapp {
         licence "Open Source (Apache 2)"
         versionId 1
     }
-    signing {
-        enabled false
+        signing {
+            enabled false
+        }
     }
-}
+
 
 dependencies {
 
