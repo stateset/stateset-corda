@@ -37,7 +37,7 @@ object ProductSchemaV1 : MappedSchema(
         mappedTypes = listOf(PersistentProduct::class.java)) {
     @Entity
     @Table(name = "product_states", indexes = arrayOf(Index(name = "idx_product_party", columnList = "party"),
-            Index(name = "idx_product_product_name", columnList = "product_name")))
+            Index(name = "idx_product_name", columnList = "name")))
     class PersistentProduct(
             @Column(name = "id")
             var id: String,

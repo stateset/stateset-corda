@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
 import sun.security.timestamp.TSResponse
 import org.springframework.web.bind.annotation.PostMapping
-import com.github.manosbatsis.corbeans.spring.boot.corda.config.NodeParams
+import com.github.manosbatsis.corbeans.corda.common.NodeParams
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import org.springframework.beans.factory.annotation.Autowired
@@ -227,8 +227,6 @@ class StatesetController() {
                 "body" to body,
                 "to" to to.name.organisation,
                 "from" to from.name.organisation,
-                "sentReceipt" to sentReceipt.toString(),
-                "deliveredReceipt" to deliveredReceipt.toString(),
                 "fromMe" to fromMe.toString(),
                 "time" to time.toString(),
                 "linearId" to linearId.toString())
@@ -328,7 +326,7 @@ class StatesetController() {
     @GetMapping("/getMessages")
     @ApiOperation(value = "Get Messages")
     fun getMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.map { it.toJson() }
     }
@@ -340,7 +338,7 @@ class StatesetController() {
     @GetMapping("/getMessages/userId")
     @ApiOperation(value = "Get Messages by userId")
     fun getMessagesByUserId(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.map { it.toJson() }
     }
@@ -352,7 +350,7 @@ class StatesetController() {
     @GetMapping("/getReceivedMessages")
     @ApiOperation(value = "Get Received Messages")
     fun getRecievedMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.map { it.toJson() }
     }
@@ -363,7 +361,7 @@ class StatesetController() {
     @GetMapping("/getSentMessages")
     @ApiOperation(value = "Get Sent Messages")
     fun getSentMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.filter { it.fromMe }
                 .map { it.toJson() }
@@ -1185,6 +1183,30 @@ class StatesetController() {
         } finally {
             Files.deleteIfExists(Paths.get(zipName))
         }
+    }
+
+
+    /** Pay Invoice. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping(value = "/payInvoice")
+    @ApiOperation(value = "Pay Invoice")
+    fun payInvoice(@PathVariable nodeName: Optional<String>, @RequestParam("invoiceNumber") invoiceNumber: String, amount: Int, request: HttpServletRequest): ResponseEntity<Any?> {
+        val invoiceNumber = request.getParameter("invoiceNumber")
+        val (status, message) = try {
+
+            val result = getService(nodeName).payInvoice(invoiceNumber, amount)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "invoiceNumber" to "$invoiceNumber"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error paying Invoice ${invoiceNumber}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
     }
 
     /** Creates an Invoice. */

@@ -76,6 +76,15 @@ class StatesetService(
         return proxy.startFlowDynamic(CreateApplicationFlow.Initiator::class.java, applicationId, applicationName, industry, applicationStatus, processor).returnValue.getOrThrow()
     }
 
+    /** Approve an Application! */
+    fun payInvoice(invoiceNumber: String, amount: Int): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(PayInvoice.Initiator::class.java, invoiceNumber, amount).returnValue.getOrThrow()
+    }
+
+
 
     /** Approve an Application! */
     fun approveApplication(applicationId: String): SignedTransaction {
@@ -234,7 +243,6 @@ class StatesetService(
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
         logger.debug("createAgreement, peers: {}", this.peers())
-        logger.debug("createAgreement, peer names: {}", this.peerNames())
         logger.debug("createAgreement, target: {}, matches: {}", counterpartyName, matches)
 
         val counterpartyName: Party = when {
@@ -288,7 +296,6 @@ class StatesetService(
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
         logger.debug("createInvoice, peers: {}", this.peers())
-        logger.debug("createInvoice, peer names: {}", this.peerNames())
         logger.debug("createInvoice, target: {}, matches: {}", counterpartyName, matches)
 
         val counterpartyName: Party = when {
@@ -306,7 +313,6 @@ class StatesetService(
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
         logger.debug("createLoan, peers: {}", this.peers())
-        logger.debug("createLoan, peer names: {}", this.peerNames())
         logger.debug("createLoan, target: {}, matches: {}", counterpartyName, matches)
 
         val counterpartyName: Party = when {

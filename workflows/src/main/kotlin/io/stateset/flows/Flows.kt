@@ -1,6 +1,7 @@
 package io.stateset
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.collect.ImmutableList
 import io.stateset.account.Account
 import io.stateset.account.AccountContract
 import io.stateset.account.AccountContract.Companion.ACCOUNT_CONTRACT_ID
@@ -36,16 +37,24 @@ import io.stateset.loan.LoanType
 import io.stateset.message.MessageContract.Companion.MESSAGE_CONTRACT_ID
 import io.stateset.message.MessageContract
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
+import java.io.File
+import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.*
 
 
 // *********
@@ -1966,7 +1975,7 @@ class ReviewApplicationFlow(val applicationId: String): FlowLogic<SignedTransact
                     val output = stx.tx.outputs.single().data
                     "This must be an Agreement transaction." using (output is Application)
                     val application = output as Application
-                    val applicationStatus =  ApplicationStatus.INREVIEW
+                    val applicationStatus = ApplicationStatus.INREVIEW
                 }
             }
 
@@ -1977,11 +1986,6 @@ class ReviewApplicationFlow(val applicationId: String): FlowLogic<SignedTransact
 }
 
 
-
-
-
-/*
-
 // *********
 // * Pay Invoice Flow *
 // *********
@@ -1991,8 +1995,8 @@ class ReviewApplicationFlow(val applicationId: String): FlowLogic<SignedTransact
 object PayInvoice {
     @InitiatingFlow
     @StartableByRPC
-    class Initiator(private val linearId: UniqueIdentifier,
-                    private val amount: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+    class Initiator(val invoiceNumber: String,
+                    val amount: Int) : FlowLogic<SignedTransaction>() {
 
         override val progressTracker: ProgressTracker = tracker()
 
@@ -2010,96 +2014,40 @@ object PayInvoice {
 
             fun tracker() = ProgressTracker(PREPARATION, BUILDING, SIGNING, COLLECTING, FINALISING)
 
-
-            fun getInvoiceByLinearId(linearId: UniqueIdentifier): StateAndRef<Invoice> {
-                val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
-                        null,
-                        ImmutableList.of(linearId),
-                        Vault.StateStatus.UNCONSUMED, null)
-
-                return getService(nodeName).proxy().vaultService.queryBy<Invoice>(queryCriteria).states.singleOrNull()
-                        ?: throw FlowException("Invoice with id $linearId not found.")
-            }
-
-            fun resolveIdentity(abstractParty: AbstractParty): Party {
-                return getService(nodeName).proxy().identityService.requireWellKnownPartyFromAnonymous(abstractParty)
-            }
         }
 
         @Suspendable
         override fun call(): SignedTransaction {
 
+            val invoiceStateAndRef = serviceHub.vaultService.queryBy<Invoice>().states.find {
+                it.state.data.invoiceNumber == invoiceNumber
+            } ?: throw IllegalArgumentException("No invoice with Invoice Number found.")
+
+            // Obtain a reference to the notary we want to use.
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
-            // Stage 1. Retrieve obligation specified by linearId from the vault.
-            progressTracker.currentStep = Initiator.Companion.PREPARATION
-            val invoiceToPay = getInvoiceByLinearId(linearId)
-            val inputInvoice = invoiceToPay.state.data
 
-            val partyIdentity = resolveIdentity(inputInvoice.party)
-            val counterpartyIdentity = resolveIdentity(inputInvoice.counterparty)
+            val invoice = invoiceStateAndRef.state.data
 
-            // Stage 3. This flow can only be initiated by the current recipient.
-            check(partyIdentity == ourIdentity) {
-                throw FlowException("Pay Invoice flow must be initiated by the counterparty.")
-            }
+            val paymentAmount = (invoice.amountDue)
+            // We're MegaCorp.  Let's print some money.
+            // subFlow(CashIssueFlow(paymentAmount, OpaqueBytes.of(1), notary))
 
-            // Stage 4. Check we have enough cash to settle the requested amount.
-            val cashBalance = serviceHub.getCashBalance(amount.token)
-            val amountLeftToPay = inputInvoice.amountRemaining
-            check(cashBalance.quantity > 0L) {
-                throw FlowException("Counterpary has no ${amount.token} to pay the invoice.")
-            }
-            check(cashBalance >= amount) {
-                throw FlowException("Borrower has only $cashBalance but needs $amount to pay the invoice.")
-            }
-            check(amountLeftToPay >= amount) {
-                throw FlowException("There's only $amountLeftToPay left to pay but you pledged $amount.")
-            }
+            val txCommand = Command(InvoiceContract.Commands.PayInvoice(), serviceHub.myInfo.legalIdentities[0].owningKey)
+            val txBuilder = TransactionBuilder(notary)
+                    .addInputState(invoiceStateAndRef)
+                    .addOutputState(invoice.copy(paid = true), InvoiceContract.INVOICE_CONTRACT_ID)
+                    .addCommand(txCommand)
+            // Add our payment to the contractor
+            // CashUtils.generateSpend(serviceHub, txBuilder, paymentAmount, serviceHub.myInfo.legalIdentitiesAndCerts[0], invoice.contractor)
 
-            // Stage 5. Create a pay command.
-            val payCommand = Command(
-                    InvoiceContract.Commands.PayInvoice(),
-                    inputInvoice.participants.map { it.owningKey })
+            // Verify that the transaction is valid.
+            txBuilder.verify(serviceHub)
+            val signedTx = serviceHub.signInitialTransaction(txBuilder)
+            val otherPartySession = initiateFlow(invoice.counterparty)
 
-            // Stage 6. Create a transaction builder. Add the settle command and input obligation.
-            progressTracker.currentStep = BUILDING
-            val builder = TransactionBuilder(notary)
-                    .addInputState(invoiceToPay)
-                    .addCommand(payCommand)
-
-            // Stage 7. Get some cash from the vault and add a spend to our transaction builder.
-            // We pay cash to the lenders obligation key.
-            val lenderPaymentKey = inputInvoice.party
-            val (_, cashSigningKeys) = Cash.generateSpend(serviceHub, builder, amount, lenderPaymentKey)
-
-            // Stage 8. Only add an output obligation state if the obligation has not been fully settled.
-            val amountRemaining = amountLeftToPay - amount
-            if (amountRemaining > Amount.zero(amount.token)) {
-                val outputObligation = inputInvoice.pay(amount)
-                builder.addOutputState(outputObligation, INVOICE_CONTRACT_ID)
-            }
-
-            // Stage 9. Verify and sign the transaction.
-            progressTracker.currentStep = SIGNING
-            builder.verify(serviceHub)
-            val ptx = serviceHub.signInitialTransaction(builder, cashSigningKeys + inputInvoice.counterparty.owningKey)
-
-            // Stage 10. Get counterparty signature.
-            progressTracker.currentStep = COLLECTING
-            val session = initiateFlow(partyIdentity)
-            subFlow(IdentitySyncFlow.Send(session, ptx.tx))
-            val stx = subFlow(CollectSignaturesFlow(
-                    ptx,
-                    setOf(session),
-                    cashSigningKeys + inputInvoice.counterparty.owningKey,
-                    COLLECTING.childProgressTracker())
-            )
-
-            // Stage 11. Finalize the transaction.
-            progressTracker.currentStep = FINALISING
 
             // Finalising the transaction.
-            return subFlow(FinalityFlow(stx, listOf(otherPartySession), CreateInvoiceFlow.Invoicer.Companion.FINALISING_TRANSACTION.childProgressTracker()))
+            return subFlow(FinalityFlow(signedTx, listOf(otherPartySession), CreateInvoiceFlow.Invoicer.Companion.FINALISING_TRANSACTION.childProgressTracker()))
         }
     }
 
@@ -2123,6 +2071,10 @@ object PayInvoice {
     }
 
 }
+
+
+
+/*
 
 
 // *********
@@ -2269,6 +2221,153 @@ object FactorInvoice {
             return subFlow(ReceiveFinalityFlow(otherSideSession = otherPartySession, expectedTxId = txId))
         }
     }
+
+
+    // ****************
+    // * Download Attachment Flow *
+    // ****************
+
+
+    @InitiatingFlow
+    @StartableByRPC
+    class DownloadAttachment(
+            private val sender: Party,
+            private val path: String
+    ) : FlowLogic<String>() {
+        companion object {
+            object RETRIEVING_ID : ProgressTracker.Step("Retrieving attachment ID")
+            object DOWNLOAD_ATTACHMENT : ProgressTracker.Step("Download attachment")
+
+            fun tracker() = ProgressTracker(
+                    RETRIEVING_ID,
+                    DOWNLOAD_ATTACHMENT
+            )
+        }
+
+        override val progressTracker = tracker()
+        @Suspendable
+        override fun call():String {
+            progressTracker.currentStep = RETRIEVING_ID
+            val criteria = QueryCriteria.VaultQueryCriteria(
+                    participants = listOf(sender,ourIdentity)
+            )
+
+            val state = serviceHub.vaultService.queryBy(
+                    contractStateType = Agreement::class.java,
+                    criteria = criteria
+            ).states.get(0).state.data.agreementHash
+
+            progressTracker.currentStep = DOWNLOAD_ATTACHMENT
+            val content = serviceHub.attachments.openAttachment(SecureHash.parse(state))!!
+            content.open().toFile(path)
+
+            return "Downloaded file from " + sender.name.organisation + " to " + path
+        }
+    }
+
+
+    fun InputStream.toFile(path: String) {
+        File(path).outputStream().use { this.copyTo(it) }
+    }
+
+
+    // ****************
+    // * Send Attachment Flow *
+    // ****************
+
+
+    @InitiatingFlow
+    @StartableByRPC
+    class SendAttachment(
+            private val receiver: Party
+    ) : FlowLogic<SignedTransaction>() {
+        companion object {
+            object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction")
+            object PROCESS_TRANSACTION : ProgressTracker.Step("PROCESS transaction")
+            object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.")
+
+            fun tracker() = ProgressTracker(
+                    GENERATING_TRANSACTION,
+                    PROCESS_TRANSACTION,
+                    FINALISING_TRANSACTION
+            )
+        }
+
+        override val progressTracker = tracker()
+        @Suspendable
+        override fun call():SignedTransaction {
+            //initiate notary
+            val notary = serviceHub.networkMapCache.notaryIdentities[0]
+
+            //Initiate transaction builder
+            val transactionBuilder = TransactionBuilder(notary)
+
+            //upload attachment via private method
+            val path = System.getProperty("user.dir")
+            println("Working Directory = $path")
+
+            val agreementHash = SecureHash.parse(uploadAttachment("../../../test.zip",
+                    serviceHub,
+                    ourIdentity,
+                    "testzip"))
+
+            //build transaction
+            val output = Agreement(agreementHash.toString(), participants = listOf(ourIdentity, receiver))
+            val commandData = InvoiceContract.Commands.Issue()
+            transactionBuilder.addCommand(commandData,ourIdentity.owningKey,receiver.owningKey)
+            transactionBuilder.addOutputState(output, AgreementContract.AGREEMENT_CONTRACT_ID)
+            transactionBuilder.addAttachment(agreementHash)
+            transactionBuilder.verify(serviceHub)
+
+            //self signing
+            progressTracker.currentStep = PROCESS_TRANSACTION
+            val signedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
+
+
+            //conter parties signing
+            progressTracker.currentStep = FINALISING_TRANSACTION
+
+            val session = initiateFlow(receiver)
+            val fullySignedTransaction = subFlow(CollectSignaturesFlow(signedTransaction, listOf(session)))
+
+            return subFlow(FinalityFlow(fullySignedTransaction, listOf(session)))
+        }
+
+
+    //private helper method
+    private fun uploadAttachment(
+            path: String,
+            service: ServiceHub,
+            whoAmI: Party,
+            filename: String
+    ): String {
+        val agreementHash = service.attachments.importAttachment(
+                File(path).inputStream(),
+                whoAmI.toString(),
+                filename)
+
+        return agreementHash.toString();
+    }
+
+
+    @InitiatedBy(SendAttachment::class)
+    class SendAttachmentResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            // Responder flow logic goes here.
+            val signTransactionFlow = object : SignTransactionFlow(counterpartySession) {
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    if (stx.tx.attachments.isEmpty()) {
+                        throw FlowException("No Jar was being sent")
+                    }
+
+                }
+            }
+            val txId = subFlow(signTransactionFlow).id
+            subFlow(ReceiveFinalityFlow(counterpartySession, expectedTxId = txId))
+        }
+    }
+
 
       */
 

@@ -70,7 +70,6 @@ data class Message(val id: UniqueIdentifier,
 
         override fun verify(tx: LedgerTransaction) {
             val messageInputs = tx.inputsOfType<Message>()
-            val messageOutputs = tx.inputsOfType<Message>()
             val messageCommand = tx.commandsOfType<MessageContract.Commands>().single()
 
             when (messageCommand.value) {
