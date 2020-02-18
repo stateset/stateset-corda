@@ -16,8 +16,6 @@ package io.stateset.product
  *    limitations under the License.
  */
 
-
-import com.sun.org.apache.xpath.internal.operations.Bool
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
