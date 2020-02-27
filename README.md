@@ -143,7 +143,38 @@ Configuration
 
 #### Database Configuration
 
-In order to use the GraphQL engine on the Stateset Network the schema, user and password will need to be created on Postgres:
+The node configuration on deploy is setup to leverage Postgres using the Cloud SQL Instance
+
+```bash
+
+   node {
+        name "O=StateSet,L=San Mateo,C=US"
+        p2pPort 10011
+        rpcSettings {
+            address("localhost:10030")
+            adminAddress("localhost:10070")
+        }
+        cordapps = []
+        rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+        extraConfig = [
+                'dataSourceProperties' : [
+                        'dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
+                        'dataSource.url' : 'jdbc:postgresql://<DATABASE_NAME>?cloudSqlInstance=<INSTANCE>&socketFactory=com.google.cloud.sql.postgres.SocketFactory&user=<USER>&password=<PASSWORD>&currentSchema=stateset',
+                        'dataSource.password' : 'password',
+                        'dataSource.user' : 'user'
+                ],
+                'database': [
+                        'transactionIsolationLevel' : 'READ_COMMITTED'
+                ],
+                'jarDirs': '[/stateset-network/drivers]'
+        ]
+        webPort 8080
+        // extraConfig = ['h2Settings.address' : 'localhost:12347']
+        webserverJar = "${rootProject.projectDir}/server/build/libs/server-${project.version}.jar"
+    }
+```
+
+In order to use the GraphQL engine on the Stateset Network; the schema, user and password will need to be created on Postgres:
 
 ```bash
 
