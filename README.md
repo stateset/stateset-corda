@@ -1,6 +1,6 @@
 # Stateset
 
-Stateset is a distributed finance network for e-commerce working capital automation. In order to join the network and use the Stateset Network Managed Platform client go to https://stateset.io/signup
+Stateset is a distributed finance network for e-commerce working capital automation. In order to use the Stateset Platform interface go to https://stateset.io/signup
 
 ```
     _____       _____                 _____
