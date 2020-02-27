@@ -116,6 +116,14 @@ java -jar corda.jar
 
 ```
 
+To teardown all of the nodes and server:
+
+```bash
+
+taskkill /f /im java.exe
+
+```
+
 #### Node Configuration
 
 Configuration 
@@ -125,6 +133,23 @@ Configuration
 - Cloud Service Provider: GCP
 - JVM or Kubernetes
 
+
+#### Database Configuration
+
+In order to use the GraphQL engine on the Stateset Network the schema, user and password will need to be created on Postgres:
+
+```bash
+
+CREATE USER "my_user" WITH LOGIN PASSWORD 'my_password';
+CREATE SCHEMA "my_schema";
+GRANT USAGE, CREATE ON SCHEMA "my_schema" TO "my_user";
+GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON ALL tables IN SCHEMA "my_schema" TO "my_user";
+ALTER DEFAULT privileges IN SCHEMA "my_schema" GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON tables TO "my_user";
+GRANT USAGE, SELECT ON ALL sequences IN SCHEMA "my_schema" TO "my_user";
+ALTER DEFAULT privileges IN SCHEMA "my_schema" GRANT USAGE, SELECT ON sequences TO "my_user";
+ALTER ROLE "my_user" SET search_path = "my_schema";
+
+```
 
 ### Network States
 
