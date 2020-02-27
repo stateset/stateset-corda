@@ -37,7 +37,7 @@ Stateset is a financial network for digital commerce working capital automation.
 
 ```bash
 
-git clone https://gitlab.com/stateset/stateset
+git clone https://github.com/stateset/stateset
 
 ```
 
