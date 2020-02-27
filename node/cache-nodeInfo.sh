@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#   Copyright 2020, Dapps Incorporated.
+#   Copyright 2020, Stateset
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 # use cached node info if there and we want to
 set -e
 
-# Migrate out of /opt/camila/config
-if [ -d /opt/camila/config ]; then
-   cp /opt/camila/config/nodeInfo* ${PERSISTENCE_FOLDER}/
+# Migrate out of /opt/stateset/config
+if [ -d /opt/stateset/config ]; then
+   cp /opt/stateset/config/nodeInfo* ${PERSISTENCE_FOLDER}/
 fi
 
 if [ ! -f nodeInfo* ]; then

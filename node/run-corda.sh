@@ -16,10 +16,11 @@
 #
 set -e
 
-echo "  ________   __  _________   ___
-       / ___/ _ | /  |/  /  _/ /  / _ |
-      / /__/ __ |/ /|_/ // // /__/ __ |
-      \___/_/ |_/_/  /_/___/____/_/ |_|
+echo " _____       _____                 _____
+_________  /______ __  /___________________  /_
+__  ___/  __/  __ `/  __/  _ \_  ___/  _ \  __/
+_(__  )/ /_ / /_/ // /_ /  __/(__  )/  __/ /_
+/____/ \__/ \__,_/ \__/ \___//____/ \___/\__/
                                        "
 
 if [ -f ./build-info.txt ]; then
@@ -34,8 +35,8 @@ echo
 
 # Create config if not present, deprectate and moving to Corda config-generator
 if [ ! -f ${CONFIG_FOLDER}/node.conf ]; then
-    echo "${CONFIG_FOLDER}/node.conf not found, creating using camila-config-generator"
-    camila-config-generator
+    echo "${CONFIG_FOLDER}/node.conf not found, creating using stateset-config-generator"
+    stateset-config-generator
 else
     echo "/etc/corda/node.conf exists:"
     cat ${CONFIG_FOLDER}/node.conf
@@ -52,11 +53,11 @@ fi
 
 
 # Cache NodeInfo, deprecate
-if [ "${CAMILA_CACHE_NODEINFO}" = "true" ]; then
-    echo "CAMILA_CACHE_NODEINFO=true, caching NodeInfo in persistence"
+if [ "${STATESET_CACHE_NODEINFO}" = "true" ]; then
+    echo "STATESET_CACHE_NODEINFO=true, caching NodeInfo in persistence"
     cache-nodeInfo
 else
-    echo "CAMILA_CACHE_NODEINFO!=true, NodeInfo not cached"
+    echo "STATESET_CACHE_NODEINFO!=true, NodeInfo not cached"
 fi
 
 : ${JVM_ARGS='-XX:+UseG1GC'}
@@ -67,5 +68,5 @@ if [[ ${JVM_ARGS} == *"Xmx"* ]]; then
   echo "WARNING: the use of the -Xmx flag is not recommended within docker containers. Use the --memory option passed to the container to limit heap size"
 fi
 
-# base-directory and config-file cannot be specified together in Corda 3.3, removing base-directory param until Corda 4 upgrade
+# base-directory and config-file cannot be specified together in Corda 4.0, removing base-directory param until Corda 4 upgrade
 java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar --config-file ${CONFIG_FOLDER}/node.conf ${CORDA_ARGS}

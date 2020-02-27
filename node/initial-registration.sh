@@ -26,18 +26,18 @@ fi
 
 TRUST_STORE_NAME=${TRUST_STORE_NAME:-network-root-truststore.jks}
 
-# Cordite EDGE
-if grep -xq '    "doormanURL" : "https://dsoa.network"' ${CONFIG_FOLDER}/node.conf; then
+# Stateset
+if grep -xq '    "doormanURL" : "https://stateset.network"' ${CONFIG_FOLDER}/node.conf; then
     TRUST_STORE_NAME="cordite-edge-truststore.jks"
     NETWORK_TRUST_PASSWORD="trustpass"
-    curl https://dsoa.network/network-map/truststore --output ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} --silent
+    curl https://stateset.network/network-map/truststore --output ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} --silent
 fi
 
-# Cordite TEST
-if grep -xq '    "doormanURL" : "https://dsoa.network"' ${CONFIG_FOLDER}/node.conf; then
+# Stateset
+if grep -xq '    "doormanURL" : "https://stateset.network"' ${CONFIG_FOLDER}/node.conf; then
     TRUST_STORE_NAME="cordite-test-truststore.jks"
     NETWORK_TRUST_PASSWORD="trustpass"
-    curl https://dsoa.network/network-map/truststore --output ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} --silent
+    curl https://stateset.network/network-map/truststore --output ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} --silent
 fi
 
 if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then

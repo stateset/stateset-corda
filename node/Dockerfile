@@ -17,7 +17,7 @@
 FROM corda/corda-corretto-4.0
 
 LABEL VENDOR="Stateset" \
-      MAINTAINER="devops@stateset.io"
+      MAINTAINER="dom@stateset.io"
 
 COPY --chown=corda:corda . .
 
@@ -26,7 +26,7 @@ USER root
 RUN mv corda.jar bin/corda.jar \
  && mv run-corda.sh bin/run-corda \
  && mv cache-nodeInfo.sh bin/cache-nodeInfo \
- && mv camila-config-generator.sh bin/camila-config-generator \
+ && mv stateset-config-generator.sh bin/stateset-config-generator \
  && mv initial-registration.sh bin/initial-registration \
  && ln -s /opt/corda/persistence /opt/corda/artemis \
  && ln -s /opt/corda /opt/stateset
