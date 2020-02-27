@@ -21,6 +21,9 @@ buildscript {
         springfox_version = '2.9.2'
         slf4j_version = '1.7.25'
         log4j_version = '2.11.2'
+        
+        // braid
+        braid_version = '4.1.2-RC13'
 
         // tokens
         tokens_release_version = '1.1'
@@ -41,6 +44,7 @@ buildscript {
         maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-lib' }
         maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-lib-dev' }
         maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+        maven { url 'https://repo1.maven.org/maven2' }
     }
 
     dependencies {
@@ -49,6 +53,9 @@ buildscript {
         classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$corda_gradle_plugins_version"
+
+        // Open API
+        classpath "org.openapitools:openapi-generator-gradle-plugin:3.3.4"
 
         // spring plugins
         classpath "org.springframework.boot:spring-boot-gradle-plugin:$spring_boot_version"
@@ -93,6 +100,7 @@ allprojects {
 
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'org.openapi.generator'
 
 sourceSets {
     main {
@@ -118,6 +126,10 @@ dependencies {
     cordaCompile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     cordaCompile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     cordaCompile "org.slf4j:jul-to-slf4j:$slf4j_version"
+
+    //Braid
+    compile "io.bluebank.braid:braid-corda:$braid_version"
+    braid 'io.bluebank.braid:braid-server:4.1.2-RC13'
 
     // Token SDK dependencies.
     cordapp "$tokens_release_group:tokens-contracts:$tokens_release_version"
