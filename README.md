@@ -455,3 +455,21 @@ The Invoice has the following business `flows` that can be called:
 - `CreateInvoice` - Create a Invoice between your organization and a known counterparty
 - `PayInvoice` - Pay an Invoice
 - `FactorInvoice` - Factor an Invoice
+
+
+Testing
+-------
+
+Testing and code review needs to be implemented on the Stateset Network.
+
+### Automated Testing
+
+Developers are strongly encouraged to write for new code, and to
+submit new unit tests for old code. Unit tests can be compiled and run.
+
+### Manual Quality Assurance (QA) Testing
+
+Changes should be tested by somebody other than the developer who wrote the
+code. This is especially important for large or high-risk changes. It is useful
+to add a test plan to the pull request description if testing the changes is
+not straightforward.
