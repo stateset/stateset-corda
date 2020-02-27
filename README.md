@@ -1,6 +1,6 @@
 # Stateset
 
-Stateset is a financial network for digital commerce working capital automation.
+Stateset is a distributed finance network for e-commerce working capital automation.
 
 ```
 	   8 Node Network Graph | 28 Edges | 1 Notary
