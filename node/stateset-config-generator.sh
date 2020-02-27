@@ -20,13 +20,9 @@ set -e
 
 echo "Creating Staeset config"
 
-# STATESET_COMPATIBILITY_ZONE_URL deprecated. Used to set NETWORKMAP_URL and DOORMAN_URL if set.
 STATESET_COMPATIBILITY_ZONE_URL=${STATESET_COMPATIBILITY_ZONE_URL:-https://stateset.network}
-
-# Corda official environment variables. If set will be used instead of defaults
 MY_LEGAL_NAME=${MY_LEGAL_NAME:-O=Stateset-$(od -x /dev/urandom | head -1 | awk '{print $7$8$9}'), OU=Stateset, L=San Mateo, C=US}
 MY_PUBLIC_ADDRESS=${MY_PUBLIC_ADDRESS:-localhost}
-# MY_P2P_PORT=10200 <- default set in corda dockerfile
 NETWORKMAP_URL=${NETWORKMAP_URL:-$STATESET_COMPATIBILITY_ZONE_URL}
 DOORMAN_URL=${DOORMAN_URL:-$STATESET_COMPATIBILITY_ZONE_URL}
 TRUST_STORE_NAME=${TRUST_STORE_NAME:-truststore.jks}
@@ -39,7 +35,7 @@ TLS_CERT_CRL_DIST_POINT=${TLS_CERT_CRL_DIST_POINT:-NULL}
 TLS_CERT_CERL_ISSUER=${TLS_CERT_CERL_ISSUER:-NULL}
 
 
-# Camila environment variables. Will override Corda official environment variables if passed.
+# Stateset environment variables. Will override Corda official environment variables if passed.
 STATESET_LEGAL_NAME=${STATESET_LEGAL_NAME:-$MY_LEGAL_NAME}
 STATESET_P2P_ADDRESS=${STATESET_P2P_ADDRESS:-$MY_PUBLIC_ADDRESS:$MY_P2P_PORT}
 STATESET_KEY_STORE_PASSWORD=${STATESET_KEY_STORE_PASSWORD:-cordacadevpass}

@@ -23,6 +23,7 @@ COPY --chown=corda:corda . .
 
 # Patch to make compatible
 USER root
+RUN yum -y install tar && yum clean all
 RUN mv corda.jar bin/corda.jar \
  && mv run-corda.sh bin/run-corda \
  && mv cache-nodeInfo.sh bin/cache-nodeInfo \
@@ -33,8 +34,10 @@ RUN mv corda.jar bin/corda.jar \
 USER corda
 
 # -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseG1GC are added by run-corda.sh
-ENV JVM_ARGS="-Dlog4j2.debug -XX:+UnlockDiagnosticVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseG1GC -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics -javaagent:./libs/jolokia-jvm-1.6.0-agent.jar=port=7005,host=localhost"
+# -Dlog4j2.debug
+ENV JVM_ARGS="-XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseG1GC -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics -javaagent:./libs/jolokia-jvm-1.6.0-agent.jar=port=7005,host=localhost"
 ENV CORDA_ARGS="--log-to-console --no-local-shell"
 
-
 CMD ["run-corda"]
+# CMD ["sleep","3600"]
+
