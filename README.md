@@ -1,6 +1,6 @@
 # Stateset
 
-Stateset is a distributed finance network for e-commerce working capital automation. In order to use the Stateset Platform interface go to https://stateset.io/signup
+Stateset is a distributed sales and finance automation network. In order to use the Stateset Platform interface go to https://stateset.io/signup
 
 The Stateset Network Swagger API can be found at https://stateset.network:8080/swagger-ui.html#/
 
