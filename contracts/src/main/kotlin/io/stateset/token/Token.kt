@@ -28,7 +28,7 @@ import javax.persistence.Table
 // ************
 
 @BelongsToContract(StatesetTokenContract::class)
-data class StatesetTokenToken(val id: UniqueIdentifier,
+data class StatesetToken(val id: UniqueIdentifier,
                    val memo: String,
                    val fromUserId: String,
                    val holder: Party,

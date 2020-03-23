@@ -401,8 +401,8 @@ class StatesetController() {
 
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/sendToken")
-    @ApiOperation(value = "Send tokens to the target party")
+    @PostMapping("/issueToken")
+    @ApiOperation(value = "Issue tokens to the target party")
     fun issueToken(@PathVariable nodeName: Optional<String>,
                   @ApiParam(value = "The recipient of the token")
                   @RequestParam(required = true) recipient: String,
@@ -439,8 +439,8 @@ class StatesetController() {
 
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/sendToken")
-    @ApiOperation(value = "Send tokens to the target party")
+    @PostMapping("/moveToken")
+    @ApiOperation(value = "Move tokens to the target party")
     fun moveToken(@PathVariable nodeName: Optional<String>,
                     @ApiParam(value = "The recipient of the token")
                     @RequestParam(required = true) recipient: String,
@@ -457,7 +457,7 @@ class StatesetController() {
             HttpStatus.CREATED to mapOf<String, String>(
                     "recipient" to "$recipient",
                     "amount" to "$amount",
-                    "memo" to "$memo",
+                    "memo" to "$memo"
 
             )
 
@@ -475,8 +475,8 @@ class StatesetController() {
 
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/sendToken")
-    @ApiOperation(value = "Send tokens to the target party")
+    @PostMapping("/redeemToken")
+    @ApiOperation(value = "Redeem tokens and remove them from the ledger")
     fun redeemToken(@PathVariable nodeName: Optional<String>,
                   @ApiParam(value = "The amount of the token")
                   @RequestParam(required = true) amount: Int,
