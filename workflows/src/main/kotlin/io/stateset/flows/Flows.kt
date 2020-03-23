@@ -1256,12 +1256,13 @@ object IssueStatesetTokenFlow {
     @Suspendable
     class Issuer(val issuer: Party, val holder: Party, val amount: Int, val memo: String) : FlowLogic<SignedTransaction>() {
 
-@Suspendable
-override fun call(): SignedTransaction {
+        @Suspendable
+        override fun call(): SignedTransaction {
 
-    val token = StatesetToken
+            val token = StatesetToken
 
-    return subFlow(IssueTokens(amount of token issuedBy issuer heldBy holder));
+            return subFlow(IssueTokens(amount of token issuedBy issuer heldBy holder));
+        }
     }
 }
 
@@ -1340,6 +1341,56 @@ class MoveTokenFlow(val recipient: Party,
         }
     }
 }
+
+// *********
+// * Move Token Flow *
+// *********
+
+
+@InitiatingFlow
+@StartableByRPC
+class RedeemTokenFlow(val amount: Int,
+                    val memo: String) : FlowLogic<SignedTransaction>() {
+
+    companion object {
+        object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new Message.")
+        object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
+        object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
+        object GATHERING_SIGS : ProgressTracker.Step("Gathering the counterparty's signature.") {
+            override fun childProgressTracker() = CollectSignaturesFlow.tracker()
+        }
+
+        object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
+            override fun childProgressTracker() = FinalityFlow.tracker()
+        }
+
+        fun tracker() = ProgressTracker(
+                GENERATING_TRANSACTION,
+                VERIFYING_TRANSACTION,
+                SIGNING_TRANSACTION,
+                GATHERING_SIGS,
+                FINALISING_TRANSACTION
+        )
+    }
+
+    override val progressTracker = tracker()
+
+    /**
+     * The flow logic is encapsulated within the call() method.
+     */
+
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+        // Obtain a reference to the notary we want to use.
+        val notary = serviceHub.networkMapCache.notaryIdentities[0]
+        progressTracker.currentStep = GENERATING_TRANSACTION
+
+
+        return subFlow(RedeemTokenFlow(amount of statesetTokenType, recipient))
+    }
+}
+
 
 
 

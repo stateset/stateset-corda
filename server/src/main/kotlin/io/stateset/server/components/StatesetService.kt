@@ -47,8 +47,8 @@ class StatesetService(
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(recipient, exactMatch = true)
-        logger.debug("sendToken, peers: {}", this.peers())
-        logger.debug("sendToken, target: {}, matches: {}", recipient, matches)
+        logger.debug("issueToken, peers: {}", this.peers())
+        logger.debug("issueToken, target: {}, matches: {}", recipient, matches)
 
         val recipient: Party = when {
             matches.isEmpty() -> throw IllegalArgumentException("Target string \"$recipient\" doesn't match any nodes on the network.")
@@ -80,10 +80,6 @@ class StatesetService(
     /** Redeem a Token! */
     fun redeemToken(amount: Int, memo: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
-
-        val matches = proxy.partiesFromName(to, exactMatch = true)
-        logger.debug("sendToken, peers: {}", this.peers())
-        logger.debug("sendToken, target: {}, matches: {}", to, matches)
 
         // Start the flow, block and wait for the response.
         return proxy.startFlowDynamic(RedeemTokenFlow::class.java, amount, memo).returnValue.getOrThrow()
