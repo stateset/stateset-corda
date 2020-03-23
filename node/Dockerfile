@@ -12,8 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# worth reading this https://developers.redhat.com/blog/2017/04/04/openjdk-and-containers/
-
 FROM corda/corda-corretto-4.0
 
 LABEL VENDOR="Stateset" \

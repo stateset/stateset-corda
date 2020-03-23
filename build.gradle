@@ -127,9 +127,6 @@ dependencies {
     cordaCompile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     cordaCompile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
-    //Braid
-    compile "io.bluebank.braid:braid-corda:$braid_version"
-    braid 'io.bluebank.braid:braid-server:4.1.2-RC13'
 
     // Token SDK dependencies.
     cordapp "$tokens_release_group:tokens-contracts:$tokens_release_version"

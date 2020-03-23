@@ -66,6 +66,12 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.*
+import net.corda.core.contracts.Amount
+import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
+import com.r3.corda.lib.tokens.contracts.utilities.heldBy
+import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
+import com.r3.corda.lib.tokens.money.FiatCurrency
+import com.r3.corda.lib.tokens.workflows.flows.rpc.IssueTokens
 
 
 // *********
@@ -1240,6 +1246,100 @@ class SendMessageFlow(val to: Party,
 }
 
 
+// *********
+// * Issue Stateset Token Flow *
+// *********
+
+object IssueStatesetTokenFlow {
+    @StartableByRPC
+    @InitiatingFlow
+    @Suspendable
+    class Issuer(val issuer: Party, val holder: Party, val amount: Int, val memo: String) : FlowLogic<SignedTransaction>() {
+
+@Suspendable
+override fun call(): SignedTransaction {
+
+    val token = StatesetToken
+
+    return subFlow(IssueTokens(amount of token issuedBy issuer heldBy holder));
+    }
+}
+
+
+// *********
+// * Move Token Flow *
+// *********
+
+
+@InitiatingFlow
+@StartableByRPC
+class MoveTokenFlow(val recipient: Party,
+                    val amount: Int,
+                    val memo: String) : FlowLogic<SignedTransaction>() {
+
+    companion object {
+        object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new Message.")
+        object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
+        object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
+        object GATHERING_SIGS : ProgressTracker.Step("Gathering the counterparty's signature.") {
+            override fun childProgressTracker() = CollectSignaturesFlow.tracker()
+        }
+
+        object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
+            override fun childProgressTracker() = FinalityFlow.tracker()
+        }
+
+        fun tracker() = ProgressTracker(
+                GENERATING_TRANSACTION,
+                VERIFYING_TRANSACTION,
+                SIGNING_TRANSACTION,
+                GATHERING_SIGS,
+                FINALISING_TRANSACTION
+        )
+    }
+
+    override val progressTracker = tracker()
+
+    /**
+     * The flow logic is encapsulated within the call() method.
+     */
+
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+        // Obtain a reference to the notary we want to use.
+        val notary = serviceHub.networkMapCache.notaryIdentities[0]
+        progressTracker.currentStep = GENERATING_TRANSACTION
+
+
+        return subFlow(MoveFungibleTokens(amount of statesetTokenType, recipient)));
+
+
+    }
+
+    @InitiatedBy(MoveTokenFlow::class)
+    // The flow is open
+    open class MoveTokenResponder(val session: FlowSession) : FlowLogic<SignedTransaction>() {
+
+        // An overridable function to contain validation is provided
+        open fun checkTransaction(stx: SignedTransaction) {
+            // To be implemented by sub type flows - otherwise do nothing
+        }
+
+        @Suspendable
+        final override fun call(): SignedTransaction {
+            subFlow(SyncKeyMappingFlowHandler(otherSession))
+            val stx = subFlow(object : SignTransactionFlow(session) {
+                override fun checkTransaction(stx: SignedTransaction) {
+                    // The validation function is called
+                    this@MoveTokenResponder.checkTransaction(stx)
+                    // Any other rules the CorDapp developer wants executed
+                }
+            })
+            return subFlow(ReceiveFinalityFlow(otherSideSession = session, expectedTxId = stx.id))
+        }
+    }
+}
 
 
 

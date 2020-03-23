@@ -233,6 +233,20 @@ class StatesetController() {
     }
 
 
+    /** Maps an Chat to a JSON object. */
+
+    private fun Token.toJson(): Map<String, String> {
+        return kotlin.collections.mapOf(
+                "id" to id.toString(),
+                "memo" to memo,
+                "to" to to.name.organisation,
+                "from" to from.name.organisation,
+                "fromMe" to fromMe.toString(),
+                "time" to time.toString(),
+                "linearId" to linearId.toString())
+    }
+
+
     private fun Invoice.toJson(): Map<String, String> {
         return kotlin.collections.mapOf(
                 "invoiceNumber" to invoiceNumber,
@@ -333,6 +347,19 @@ class StatesetController() {
     }
 
 
+    /** Returns a list of existing Messages. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @GetMapping("/getTokens")
+    @ApiOperation(value = "Get Tokens")
+    fun getTokens(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
+        val tokenStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Token::class.java).states
+        val tokenStates = tokenStateAndRefs.map { it.state.data }
+        return tokenStates.map { it.toJson() }
+    }
+
+
+
     /** Get Messages by UserId */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
@@ -366,6 +393,41 @@ class StatesetController() {
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.filter { it.fromMe }
                 .map { it.toJson() }
+    }
+
+
+    /** Send Token*/
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping("/sendToken")
+    @ApiOperation(value = "Send tokens to the target party")
+    fun sendToken(@PathVariable nodeName: Optional<String>,
+                    @ApiParam(value = "The recipient of the token")
+                    @RequestParam(required = true) recipient: String,
+                    @ApiParam(value = "The amount of the token")
+                    @RequestParam(required = true) amount: Int,
+                    @ApiParam(value = "The memo of the transaction")
+                    @RequestParam("memo") memo: String): ResponseEntity<Any?> {
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).sendToken(recipient, amount, memo)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "recipient" to "$recipient",
+                    "amount" to "$amount",
+                    "memo" to "$memo",
+
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error sending token to ${recipient}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
     }
 
 
