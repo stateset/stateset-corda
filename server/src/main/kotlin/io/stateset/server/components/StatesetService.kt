@@ -42,9 +42,26 @@ class StatesetService(
         private val logger = LoggerFactory.getLogger(CordaNodeServiceImpl::class.java)
     }
 
+    /** Issue a Token! */
+    fun issueToken(recipient: String, amount: Int, memo: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
 
-    /** Send a Token! */
-    fun sendToken(recipient: String, amount: Int, memo: String): SignedTransaction {
+        val matches = proxy.partiesFromName(recipient, exactMatch = true)
+        logger.debug("sendToken, peers: {}", this.peers())
+        logger.debug("sendToken, target: {}, matches: {}", recipient, matches)
+
+        val recipient: Party = when {
+            matches.isEmpty() -> throw IllegalArgumentException("Target string \"$recipient\" doesn't match any nodes on the network.")
+            matches.size > 1 -> throw IllegalArgumentException("Target string \"$recipient\"  matches multiple nodes on the network.")
+            else -> matches.single()
+        }
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(IssueTokenFlow::class.java, recipient, amount, memo).returnValue.getOrThrow()
+    }
+
+
+    /** Move a Token! */
+    fun moveToken(recipient: String, amount: Int, memo: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(to, exactMatch = true)
@@ -57,7 +74,19 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(SendTokenFlow::class.java, recipient, amount, memo).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(MoveTokenFlow::class.java, recipient, amount, memo).returnValue.getOrThrow()
+    }
+
+    /** Redeem a Token! */
+    fun redeemToken(amount: Int, memo: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        val matches = proxy.partiesFromName(to, exactMatch = true)
+        logger.debug("sendToken, peers: {}", this.peers())
+        logger.debug("sendToken, target: {}, matches: {}", to, matches)
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(RedeemTokenFlow::class.java, amount, memo).returnValue.getOrThrow()
     }
 
     /** Send a Message! */
