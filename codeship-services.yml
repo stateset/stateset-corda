@@ -1,0 +1,25 @@
+buildattrs:
+    image: alpine
+    volumes:
+      - ./build_attrs:/build_attrs
+
+stateset-mainnet:
+    cached: true
+    encrypted_env_file: encrypted.env
+    build:
+      dockerfile: ./node/Dockerfile
+      image: gcr.io/stateset-28/stateset
+      encrypted_env_file: encrypted.env
+    cached: true
+    default_cache_branch: "master"
+codeship_gcr_dockercfg:
+  image: codeship/gcr-dockercfg-generator
+  encrypted_env_file: encrypted.env
+  add_docker: true
+codeship_gce_service:
+  image: codeship/google-cloud-deployment
+  encrypted_env_file: encrypted.env
+  add_docker: true
+  working_dir: /deploy
+  volumes:
+    - ./:/deploy

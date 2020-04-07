@@ -54,7 +54,7 @@ data class StatesetToken(val id: UniqueIdentifier,
     val issuedStatesetToken: IssuedTokenType = statesetTokenType issuedBy issuer
 
 
-    val states: TokenType = TokenType(tokenIdentifier = "STE", fractionDigits = 2)
+    val states: TokenType = TokenType(tokenIdentifier = "STATE", fractionDigits = 2)
     val dollars: TokenType = USD
     val pounds: TokenType = GBP
     val euros: TokenType = EUR
@@ -115,7 +115,7 @@ class StatesetTokenContract : Contract {
             is Commands.MoveToken -> requireThat {
 
                 val tokenOutput = tokenOutputs.single()
-                "the holder should be different to the recipient" using (tokenOutput.holder != tokenOutput.recipient)
+                "the holder should be different to the issuer" using (tokenOutput.holder != tokenOutput.issuer)
                 "this amount of the token should be greater than 0" using (tokenOutput.amount > 0)
 
             }

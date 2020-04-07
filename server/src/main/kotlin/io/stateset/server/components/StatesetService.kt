@@ -102,6 +102,14 @@ class StatesetService(
         return proxy.startFlowDynamic(SendMessageFlow::class.java, to, userId, message).returnValue.getOrThrow()
     }
 
+    /** Reply to a Message! */
+    fun replyMessage(messageId: String, body: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(ReplyMessageFlow::class.java, messageId, body).returnValue.getOrThrow()
+    }
+
     /** Create an Application */
     fun createApplication(applicationId: String, applicationName: String, industry: String, applicationStatus: ApplicationStatus, partyName: String ): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy

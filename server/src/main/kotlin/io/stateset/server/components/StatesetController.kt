@@ -538,6 +538,37 @@ class StatesetController() {
     }
 
 
+    /** Reply to Message*/
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping("/replyMessage")
+    @ApiOperation(value = "Reply to a message ")
+    fun sendMessage(@PathVariable nodeName: Optional<String>,
+                    @ApiParam(value = "The message id")
+                    @RequestParam(required = true) messageId: String,
+                    @ApiParam(value = "The message text")
+                    @RequestParam("body") body: String): ResponseEntity<Any?> {
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).replyMessage(messageId, body)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "messageID" to "$messageId",
+                    "body" to "$body"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error replying to message to ${messageId}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
     /** Returns a list of existing Applications. */
 
 

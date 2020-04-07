@@ -1,6 +1,5 @@
 package io.stateset
 
-import StatesetTokenType
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.collect.ImmutableList
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -10,7 +9,6 @@ import com.r3.corda.lib.tokens.workflows.flows.move.MoveFungibleTokensFlow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
 import com.r3.corda.lib.tokens.workflows.types.PartyAndAmount
 import com.r3.corda.lib.tokens.workflows.utilities.tokenAmountWithIssuerCriteria
-import holder
 import io.stateset.account.Account
 import io.stateset.account.AccountContract
 import io.stateset.account.AccountContract.Companion.ACCOUNT_CONTRACT_ID
@@ -45,7 +43,6 @@ import io.stateset.loan.LoanStatus
 import io.stateset.loan.LoanType
 import io.stateset.message.MessageContract.Companion.MESSAGE_CONTRACT_ID
 import io.stateset.message.MessageContract
-import issuer
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
@@ -59,7 +56,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
-import statesetTokenType
 import java.io.File
 import java.io.InputStream
 import java.time.LocalDateTime
@@ -1315,7 +1311,6 @@ class MoveTokenFlow(val recipient: Party,
 
         return subFlow(MoveFungibleTokens(amount of statesetTokenType, recipient)));
 
-
     }
 
     @InitiatedBy(MoveTokenFlow::class)
@@ -2242,7 +2237,7 @@ object PayInvoice {
 
 
 
-/*
+
 
 
 // *********
@@ -2414,10 +2409,10 @@ object FactorInvoice {
 
         override val progressTracker = tracker()
         @Suspendable
-        override fun call():String {
+        override fun call(): String {
             progressTracker.currentStep = RETRIEVING_ID
             val criteria = QueryCriteria.VaultQueryCriteria(
-                    participants = listOf(sender,ourIdentity)
+                    participants = listOf(sender, ourIdentity)
             )
 
             val state = serviceHub.vaultService.queryBy(
@@ -2463,7 +2458,7 @@ object FactorInvoice {
 
         override val progressTracker = tracker()
         @Suspendable
-        override fun call():SignedTransaction {
+        override fun call(): SignedTransaction {
             //initiate notary
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
@@ -2482,7 +2477,7 @@ object FactorInvoice {
             //build transaction
             val output = Agreement(agreementHash.toString(), participants = listOf(ourIdentity, receiver))
             val commandData = InvoiceContract.Commands.Issue()
-            transactionBuilder.addCommand(commandData,ourIdentity.owningKey,receiver.owningKey)
+            transactionBuilder.addCommand(commandData, ourIdentity.owningKey, receiver.owningKey)
             transactionBuilder.addOutputState(output, AgreementContract.AGREEMENT_CONTRACT_ID)
             transactionBuilder.addAttachment(agreementHash)
             transactionBuilder.verify(serviceHub)
@@ -2502,40 +2497,39 @@ object FactorInvoice {
         }
 
 
-    //private helper method
-    private fun uploadAttachment(
-            path: String,
-            service: ServiceHub,
-            whoAmI: Party,
-            filename: String
-    ): String {
-        val agreementHash = service.attachments.importAttachment(
-                File(path).inputStream(),
-                whoAmI.toString(),
-                filename)
+        //private helper method
+        private fun uploadAttachment(
+                path: String,
+                service: ServiceHub,
+                whoAmI: Party,
+                filename: String
+        ): String {
+            val agreementHash = service.attachments.importAttachment(
+                    File(path).inputStream(),
+                    whoAmI.toString(),
+                    filename)
 
-        return agreementHash.toString();
-    }
+            return agreementHash.toString();
+        }
 
 
-    @InitiatedBy(SendAttachment::class)
-    class SendAttachmentResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            // Responder flow logic goes here.
-            val signTransactionFlow = object : SignTransactionFlow(counterpartySession) {
-                override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    if (stx.tx.attachments.isEmpty()) {
-                        throw FlowException("No Jar was being sent")
+        @InitiatedBy(SendAttachment::class)
+        class SendAttachmentResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                // Responder flow logic goes here.
+                val signTransactionFlow = object : SignTransactionFlow(counterpartySession) {
+                    override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                        if (stx.tx.attachments.isEmpty()) {
+                            throw FlowException("No Jar was being sent")
+                        }
+
                     }
-
                 }
+                val txId = subFlow(signTransactionFlow).id
+                subFlow(ReceiveFinalityFlow(counterpartySession, expectedTxId = txId))
             }
-            val txId = subFlow(signTransactionFlow).id
-            subFlow(ReceiveFinalityFlow(counterpartySession, expectedTxId = txId))
         }
     }
-
-
-      */
+}
 
