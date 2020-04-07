@@ -1,5 +1,7 @@
 # Stateset
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 Stateset is a distributed sales and finance automation network. In order to use the Stateset Platform interface go to https://stateset.io/signup
 
 The Stateset Network Swagger API can be found at https://stateset.network:8080/swagger-ui.html#/
