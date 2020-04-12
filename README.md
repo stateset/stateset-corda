@@ -22,7 +22,7 @@ The Stateset Network Swagger API can be found at https://stateset.network:8080/s
 	|  PartyB  | |  PartyC  | |  PartyD  | 
 	|          | |	   	| |          |                   
  	 \--------/   \--------/   \--------/
-  ^      ^       v      ^      ^    v        ^      ^ 
+  ^      ^       v     ^      ^     v       ^      ^ 
  /--------\	      /--------\	   /--------\
 |	   |	     |	        |	  |	     |
 |  PartyA  |	     | Notaries |	  |  PartyE  | 
