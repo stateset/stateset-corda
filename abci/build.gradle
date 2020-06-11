@@ -54,3 +54,5 @@ protobuf {
         }
     }
 }
+
+mainClassName = 'io.stateset.abci.AppKt'
