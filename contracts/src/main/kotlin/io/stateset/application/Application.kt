@@ -23,6 +23,7 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import java.lang.IllegalArgumentException
+import java.util.*
 
 // *********
 // * Application State *
@@ -32,6 +33,15 @@ import java.lang.IllegalArgumentException
 @BelongsToContract(ApplicationContract::class)
 data class Application(val applicationId: String,
                        val applicationName: String,
+                       val businessAgeRange: BusinessAgeRange,
+                       val businessEmail: String,
+                       val businessPhone: String,
+                       val businessRevenueRange: BusinessRevenueRange,
+                       val businessType: BusinessType,
+                       val estimatedPurchaseAmount: Int,
+                       val estimatedPurchaseFrequency: EstimatedPurchaseFrequency,
+                       val submitted: Boolean,
+                       val submittedAt: String,
                        val industry: String,
                        val applicationStatus: ApplicationStatus,
                        val agent: Party,
@@ -49,6 +59,25 @@ enum class ApplicationStatus {
     SUBMITTED, REQUESTED, UNSTARTED, STARTED, INREVIEW, MEDICAL_CHECK, FINANCIAL_CHECK, WORKING, ESCALATED, APPROVED, REJECTED
 }
 
+@CordaSerializable
+enum class BusinessAgeRange(val age: Int) {
+    AGE_0_2(0-2),AGE_2_5(2-5), AGE_5_10(5-10), AGE_10(10)
+}
+
+@CordaSerializable
+enum class BusinessRevenueRange(val revenue: Int) {
+    REV_0_200K(0-200000), REV_200K_500K(200000-500000), REV_500K_2M(500000-2000000), REV_2M_5M(2000000-5000000), REV_5M_25M(5000000-25000000), REV_25M_100M(2500000-100000000)
+}
+
+@CordaSerializable
+enum class BusinessType {
+    SOLE_PROP, LLC, CORP, NONPROFIT, GOV
+}
+
+@CordaSerializable
+enum class EstimatedPurchaseFrequency {
+    ONCE, WEEKLY, MONTHLY, YEARLY
+}
 
 
 class ApplicationContract : Contract {

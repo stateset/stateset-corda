@@ -29,6 +29,8 @@ import io.stateset.case.CaseStatus
 import io.stateset.loan.LoanStatus
 import io.stateset.loan.LoanType
 import io.stateset.message.Message
+import io.stateset.proposal.ProposalStatus
+import io.stateset.proposal.ProposalType
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -111,7 +113,7 @@ class StatesetService(
     }
 
     /** Create an Application */
-    fun createApplication(applicationId: String, applicationName: String, industry: String, applicationStatus: ApplicationStatus, partyName: String ): SignedTransaction {
+    fun createApplication(applicationId: String, applicationName: String, businessAgeRange: BusinessAgeRange, businessEmail: String, businessPhone: String, businessRevenueRange: BusinessRevenueRange, businessType: BusinessType, estimatedPurchaseAmount: Int, estimatedPurchaseFrequency: EstimatedPurchaseFrequency, industry: String, applicationStatus: ApplicationStatus, partyName: String ): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(partyName, exactMatch = true)
@@ -124,8 +126,9 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateApplicationFlow.Initiator::class.java, applicationId, applicationName, industry, applicationStatus, processor).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateApplicationFlow.Initiator::class.java, applicationId, applicationName, businessAgeRange, businessEmail, businessPhone, businessRevenueRange, businessType, estimatedPurchaseAmount, estimatedPurchaseFrequency, industry, applicationStatus, processor).returnValue.getOrThrow()
     }
+
 
     /** Approve an Application! */
     fun payInvoice(invoiceNumber: String, amount: Int): SignedTransaction {
@@ -286,6 +289,41 @@ class StatesetService(
 
         // Start the flow, block and wait for the response.
         return proxy.startFlowDynamic(EscalateCaseFlow::class.java, caseId).returnValue.getOrThrow()
+    }
+
+    /** Create an Proposal! */
+    fun createProposal(proposalNumber: String, proposalName: String, proposalHash: String, proposalStatus: ProposalStatus, proposalType: ProposalType, totalProposalValue: Int, counterpartyName: String, proposalStartDate: String, proposalEndDate: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
+        logger.debug("createProposal, peers: {}", this.peers())
+        logger.debug("createProposal, peer names: {}", this.peerNames())
+        logger.debug("createProposal, target: {}, matches: {}", counterpartyName, matches)
+
+        val counterpartyName: Party = when {
+            matches.isEmpty() -> throw IllegalArgumentException("Target string \"$counterpartyName\" doesn't match any nodes on the network.")
+            matches.size > 1 -> throw IllegalArgumentException("Target string \"$counterpartyName\"  matches multiple nodes on the network.")
+            else -> matches.single()
+        }
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(CreateProposalFlow.Initiator::class.java, proposalNumber, proposalName, proposalHash, proposalStatus, proposalType, totalProposalValue, proposalStartDate, proposalEndDate, counterpartyName).returnValue.getOrThrow()
+    }
+
+    /** Accept a Proposal! */
+    fun acceptProposal(proposalNumber: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(AcceptProposalFlow.AcceptProposalFlow::class.java, proposalNumber).returnValue.getOrThrow()
+    }
+
+
+    /** Reject a Proposal! */
+    fun rejectProposal(proposalNumber: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(RejectProposalFlow.RejectProposalFlow::class.java, proposalNumber).returnValue.getOrThrow()
     }
 
     /** Create an Agreement! */

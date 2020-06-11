@@ -68,6 +68,300 @@ import com.r3.corda.lib.tokens.contracts.utilities.heldBy
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.money.FiatCurrency
 import com.r3.corda.lib.tokens.workflows.flows.rpc.IssueTokens
+import io.stateset.proposal.Proposal
+import io.stateset.proposal.ProposalContract
+import io.stateset.proposal.ProposalStatus
+import io.stateset.proposal.ProposalType
+
+
+// ***************************************************
+// * STATESET B2B SALES AND FINANCE AUTOMATION FLOWS *
+// ***************************************************
+
+
+// *********
+// * Create Propsoal Flow *
+// *********
+
+
+object CreateProposalFlow {
+    @StartableByRPC
+    @InitiatingFlow
+    @Suspendable
+    class Initiator(val proposalNumber: String,
+                    val proposalName: String,
+                    val proposalHash: String,
+                    val proposalStatus: ProposalStatus,
+                    val proposalType: ProposalType,
+                    val totalProposalValue: Int,
+                    val proposalStartDate: String,
+                    val proposalEndDate: String,
+                    val otherParty: Party) : FlowLogic<SignedTransaction>() {
+
+        companion object {
+            object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new Proposal.")
+            object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
+            object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
+            object GATHERING_SIGS : ProgressTracker.Step("Gathering the counterparty signature.") {
+                override fun childProgressTracker() = CollectSignaturesFlow.tracker()
+            }
+
+            object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
+                override fun childProgressTracker() = FinalityFlow.tracker()
+            }
+
+            fun tracker() = ProgressTracker(
+                    GENERATING_TRANSACTION,
+                    VERIFYING_TRANSACTION,
+                    SIGNING_TRANSACTION,
+                    GATHERING_SIGS,
+                    FINALISING_TRANSACTION
+            )
+        }
+
+        override val progressTracker = tracker()
+
+        /**
+         * The flow logic is encapsulated within the call() method.
+         */
+
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+            // Obtain a reference to the notary we want to use.
+            val notary = serviceHub.networkMapCache.notaryIdentities[0]
+            progressTracker.currentStep = GENERATING_TRANSACTION
+
+            // Generate an unsigned transaction.
+            val me = ourIdentityAndCert.party
+            val active = false
+            val time = LocalDateTime.now()
+            val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+            val formatted = time.format(formatter)
+            val createdAt = formatted
+            val lastUpdated = formatted
+            // val contactReference = serviceHub.vaultService.queryBy<Contract>(contact_id).state.single()
+            // val reference = contactReference.referenced()
+            val proposalState = Proposal(proposalNumber, proposalName, proposalHash, proposalStatus, proposalType, totalProposalValue, me,  otherParty, proposalStartDate, proposalEndDate, active, createdAt, lastUpdated)
+            val txCommand = Command(ProposalContract.Commands.CreateProposal(), proposalState.participants.map { it.owningKey })
+            progressTracker.currentStep = VERIFYING_TRANSACTION
+            val txBuilder = TransactionBuilder(notary)
+                    //        .addReferenceState(reference)
+                    .addOutputState(proposalState, ProposalContract.PROPOSAL_CONTRACT_ID)
+                    .addCommand(txCommand)
+            // .addOutputState(AttachmentContract.Attachment(attachmentId), ATTACHMENT_ID)
+            //  .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
+            //  .addAttachment(attachmentId)
+
+            txBuilder.verify(serviceHub)
+            // Sign the transaction.
+            progressTracker.currentStep = SIGNING_TRANSACTION
+            val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
+
+
+            val otherPartyFlow = initiateFlow(otherParty)
+            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(otherPartyFlow), GATHERING_SIGS.childProgressTracker()))
+
+            // Finalising the transaction.
+            return subFlow(FinalityFlow(fullySignedTx, listOf(otherPartyFlow), FINALISING_TRANSACTION.childProgressTracker()))
+        }
+    }
+
+    @InitiatedBy(Initiator::class)
+    class Acceptor(val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    val output = stx.tx.outputs.single().data
+                    "This must be an Propsoal transaction." using (output is Proposal)
+                    val proposal = output as Proposal
+                    "I won't accept Proposals with a value under 100." using (proposal.totalProposalValue >= 100)
+                }
+            }
+
+            val txId = subFlow(signTransactionFlow).id
+
+            return subFlow(ReceiveFinalityFlow(otherSideSession = otherPartySession, expectedTxId = txId))
+        }
+    }
+
+}
+
+
+// *********
+// * Accept Proposal Flow *
+// *********
+
+object AcceptProposalFlow {
+    @InitiatingFlow
+    @StartableByRPC
+    class AcceptProposalFlow(val proposalNumber: String) : FlowLogic<SignedTransaction>() {
+
+        override val progressTracker = ProgressTracker()
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+
+            // Retrieving the Proposal Input from the Vault
+            val proposalStateAndRef = serviceHub.vaultService.queryBy<Proposal>().states.find {
+                it.state.data.proposalNumber == proposalNumber
+            } ?: throw IllegalArgumentException("No proposal with ID ${proposalNumber} found.")
+
+
+            val proposal = proposalStateAndRef.state.data
+            val proposalStatus = ProposalStatus.ACCEPTED
+
+
+            // Creating the Renewal output.
+
+            val renewedProposal = Proposal(
+                    proposal.proposalNumber,
+                    proposal.proposalName,
+                    proposal.proposalHash,
+                    proposalStatus,
+                    proposal.proposalType,
+                    proposal.totalProposalValue,
+                    proposal.party,
+                    proposal.counterparty,
+                    proposal.proposalStartDate,
+                    proposal.proposalEndDate,
+                    proposal.active,
+                    proposal.createdAt,
+                    proposal.lastUpdated,
+                    proposal.linearId)
+
+            // Creating the command.
+            val requiredSigners = listOf(proposal.party.owningKey, proposal.counterparty.owningKey)
+            val command = Command(ProposalContract.Commands.AcceptProposal(), requiredSigners)
+
+            // Building the transaction.
+            val notary = proposalStateAndRef.state.notary
+            val txBuilder = TransactionBuilder(notary)
+            txBuilder.addInputState(proposalStateAndRef)
+            txBuilder.addOutputState(renewedProposal, ProposalContract.PROPOSAL_CONTRACT_ID)
+            txBuilder.addCommand(command)
+
+            // Sign the transaction.
+            val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
+
+            // Gathering the counterparty's signature
+            val counterparty = if (ourIdentity == proposal.party) proposal.counterparty else proposal.party
+            val counterpartySession = initiateFlow(counterparty)
+            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, listOf(counterpartySession)))
+
+            // Finalising the transaction.
+            return subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession)))
+        }
+    }
+
+    @InitiatedBy(AcceptProposalFlow::class)
+    class Acceptor(val counterpartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(counterpartySession) {
+                override fun checkTransaction(stx: SignedTransaction) {
+                    val ledgerTx = stx.toLedgerTransaction(serviceHub, false)
+                    val counterparty = ledgerTx.inputsOfType<Proposal>().single().counterparty
+                    if (counterparty != counterpartySession.counterparty) {
+                        throw FlowException("Only the counterparty can Accept the Proposal")
+                    }
+                }
+            }
+
+            val txId = subFlow(signTransactionFlow).id
+
+            return subFlow(ReceiveFinalityFlow(counterpartySession, txId))
+        }
+    }
+}
+
+// *********
+// * Reject Proposal Flow *
+// *********
+
+object RejectProposalFlow {
+    @InitiatingFlow
+    @StartableByRPC
+    class RejectProposalFlow(val proposalNumber: String) : FlowLogic<SignedTransaction>() {
+
+        override val progressTracker = ProgressTracker()
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+
+            // Retrieving the Proposal Input from the Vault
+            val proposalStateAndRef = serviceHub.vaultService.queryBy<Proposal>().states.find {
+                it.state.data.proposalNumber == proposalNumber
+            } ?: throw IllegalArgumentException("No proposal with ID $proposalNumber found.")
+
+
+            val proposal = proposalStateAndRef.state.data
+            val proposalStatus = ProposalStatus.REJECTED
+
+
+            // Creating the Rejected output.
+
+            val rejectedProposal = Proposal(
+                    proposal.proposalNumber,
+                    proposal.proposalName,
+                    proposal.proposalHash,
+                    proposalStatus,
+                    proposal.proposalType,
+                    proposal.totalProposalValue,
+                    proposal.party,
+                    proposal.counterparty,
+                    proposal.proposalStartDate,
+                    proposal.proposalEndDate,
+                    proposal.active,
+                    proposal.createdAt,
+                    proposal.lastUpdated,
+                    proposal.linearId)
+
+            // Creating the command.
+            val requiredSigners = listOf(proposal.party.owningKey, proposal.counterparty.owningKey)
+            val command = Command(ProposalContract.Commands.RejectProposal(), requiredSigners)
+
+            // Building the transaction.
+            val notary = proposalStateAndRef.state.notary
+            val txBuilder = TransactionBuilder(notary)
+            txBuilder.addInputState(proposalStateAndRef)
+            txBuilder.addOutputState(rejectedProposal, ProposalContract.PROPOSAL_CONTRACT_ID)
+            txBuilder.addCommand(command)
+
+            // Sign the transaction.
+            val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
+
+            // Gathering the counterparty's signature
+            val counterparty = if (ourIdentity == proposal.party) proposal.counterparty else proposal.party
+            val counterpartySession = initiateFlow(counterparty)
+            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, listOf(counterpartySession)))
+
+            // Finalising the transaction.
+            return subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession)))
+        }
+    }
+
+    @InitiatedBy(RejectProposalFlow::class)
+    class Rejector(val counterpartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(counterpartySession) {
+                override fun checkTransaction(stx: SignedTransaction) {
+                    val ledgerTx = stx.toLedgerTransaction(serviceHub, false)
+                    val counterparty = ledgerTx.inputsOfType<Proposal>().single().counterparty
+                    if (counterparty != counterpartySession.counterparty) {
+                        throw FlowException("Only the counterparty can Reject the Proposal")
+                    }
+                }
+            }
+
+            val txId = subFlow(signTransactionFlow).id
+
+            return subFlow(ReceiveFinalityFlow(counterpartySession, txId))
+        }
+    }
+}
 
 
 // *********

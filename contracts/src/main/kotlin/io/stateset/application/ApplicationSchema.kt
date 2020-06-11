@@ -38,6 +38,33 @@ object ApplicationSchemaV1 : MappedSchema(
             @Column(name = "applicationName")
             var applicationName: String,
 
+            @Column(name = "businessAgeRange")
+            var businessAgeRange: String,
+
+            @Column(name = "businessEmail")
+            var businessEmail: String,
+
+            @Column(name = "businessPhone")
+            var businessPhone: String,
+
+            @Column(name = "businessRevenueRange")
+            var businessRevenueRange: String,
+
+            @Column(name = "businessType")
+            var businessType: String,
+
+            @Column(name = "estimatedPurchaseAmount")
+            var estimatedPurchaseAmount: String,
+
+            @Column(name = "estimatedPurchaseFrequency")
+            var estimatedPurchaseFrequency: String,
+
+            @Column(name = "submitted")
+            var submitted: String,
+
+            @Column(name = "submittedAt")
+            var submittedAt: String,
+
             @Column(name = "industry")
             var industry: String,
 
@@ -57,6 +84,15 @@ object ApplicationSchemaV1 : MappedSchema(
         constructor() : this(
                 applicationId = "",
                 applicationName = "",
+                businessAgeRange = "",
+                businessEmail = "",
+                businessPhone = "",
+                businessRevenueRange= "",
+                businessType = "",
+                estimatedPurchaseAmount = "",
+                estimatedPurchaseFrequency = "",
+                submitted = "",
+                submittedAt = "",
                 industry = "",
                 applicationStatus = "",
                 agent = "",

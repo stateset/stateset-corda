@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
 import sun.security.timestamp.TSResponse
 import org.springframework.web.bind.annotation.PostMapping
-import com.github.manosbatsis.corbeans.corda.common.NodeParams
+import com.github.manosbatsis.corbeans.spring.boot.corda.config.NodeParams
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import org.springframework.beans.factory.annotation.Autowired
@@ -36,8 +36,7 @@ import io.stateset.account.*
 import io.stateset.agreement.Agreement
 import io.stateset.agreement.AgreementStatus
 import io.stateset.agreement.AgreementType
-import io.stateset.application.Application
-import io.stateset.application.ApplicationStatus
+import io.stateset.application.*
 import io.stateset.approval.Approval
 import io.stateset.approval.ApprovalStatus
 import io.stateset.case.*
@@ -48,13 +47,12 @@ import io.stateset.loan.Loan
 import io.stateset.loan.LoanStatus
 import io.stateset.loan.LoanType
 import io.stateset.message.Message
-import io.stateset.message.MessageSchema
-import io.stateset.product.Product
+import io.stateset.proposal.Proposal
+import io.stateset.proposal.ProposalStatus
+import io.stateset.proposal.ProposalType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.Builder
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import org.springframework.core.io.InputStreamResource
 import org.springframework.http.HttpHeaders
 import org.springframework.web.multipart.MultipartFile
@@ -67,13 +65,13 @@ import java.nio.file.Paths
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.servlet.http.HttpServletRequest
-
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * Stateset API Endpoints
  */
 
-@CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+@CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
 @RestController
 @RequestMapping("/api/{nodeName}")
 class StatesetController() {
@@ -96,10 +94,7 @@ class StatesetController() {
         logger.debug("Auto-configured RESTful services for Corda nodes:: {}, default node: {}", services.keys, defaultNodeName)
     }
 
-    /**
-     * Handle both "api/sendMessage" and "api/message/{nodeName}" by using `cordform` as the default
-     * node name to support optional dedicated server per node when using `runnodes`.
-     */
+
     fun getService(optionalNodeName: Optional<String>): StatesetService {
         val nodeName = if (optionalNodeName.isPresent) optionalNodeName.get() else defaultNodeName
         return this.services.get("${nodeName}NodeService")
@@ -110,13 +105,41 @@ class StatesetController() {
 
     private fun Application.toJson(): Map<String, String> {
         return kotlin.collections.mapOf(
-                "agent" to agent.name.organisation,
-                "provider" to provider.name.organisation,
-                "counterparty" to provider.name.toString(),
                 "applicationId" to applicationId,
                 "applicationName" to applicationName,
+                "businessAgeRange" to businessAgeRange.toString(),
+                "businessEmail" to businessEmail,
+                "businessPhone" to businessPhone,
+                "businessRevenueRange" to businessRevenueRange.toString(),
+                "businessType" to businessType.toString(),
+                "estimatedPurchaseAmount" to estimatedPurchaseAmount.toString(),
+                "estimatedPurchaseFrequency" to estimatedPurchaseFrequency.toString(),
+                "submitted" to submitted.toString(),
+                "submittedAt" to submittedAt.toString(),
                 "industry" to industry,
-                "applicationStatus" to applicationStatus.toString())
+                "applicationStatus" to applicationStatus.toString(),
+                "agent" to agent.name.organisation,
+                "provider" to provider.name.organisation)
+    }
+
+    /** Maps a Proposal to a JSON object. */
+
+    private fun Proposal.toJson(): Map<String, String> {
+        return kotlin.collections.mapOf(
+                "proposalNumber" to proposalNumber,
+                "proposalName" to proposalName,
+                "party" to party.name.organisation,
+                "counterparty" to counterparty.name.organisation,
+                "proposalType" to proposalType.toString(),
+                "proposalStatus" to proposalStatus.toString(),
+                "proposalStartDate" to proposalStartDate,
+                "proposalEndDate" to proposalEndDate,
+                "totalAgreementValue" to totalProposalValue.toString(),
+                "proposalHash" to proposalHash,
+                "active" to active.toString(),
+                "createdAt" to createdAt.toString(),
+                "lastUpdated" to lastUpdated.toString(),
+                "linearId" to linearId.toString())
     }
 
 
@@ -224,23 +247,13 @@ class StatesetController() {
     private fun Message.toJson(): Map<String, String> {
         return kotlin.collections.mapOf(
                 "id" to id.toString(),
+                "subject" to subject,
                 "body" to body,
                 "to" to to.name.organisation,
                 "from" to from.name.organisation,
-                "fromMe" to fromMe.toString(),
-                "time" to time.toString(),
-                "linearId" to linearId.toString())
-    }
-
-
-    /** Maps an Chat to a JSON object. */
-
-    private fun Token.toJson(): Map<String, String> {
-        return kotlin.collections.mapOf(
-                "id" to id.toString(),
-                "memo" to memo,
-                "to" to to.name.organisation,
-                "from" to from.name.organisation,
+                "fromUser" to fromUserId,
+                "sentReceipt" to sentReceipt.toString(),
+                "deliveredReceipt" to deliveredReceipt.toString(),
                 "fromMe" to fromMe.toString(),
                 "time" to time.toString(),
                 "linearId" to linearId.toString())
@@ -277,7 +290,6 @@ class StatesetController() {
                 "loanReason" to loanReason,
                 "loanStatus" to loanStatus.toString(),
                 "loanType" to loanType.toString(),
-                "loanInterestRate" to loanInterestRate.toString(),
                 "amountDue" to amountDue.toString(),
                 "amountPaid" to amountPaid.toString(),
                 "amountRemaining" to amountRemaining.toString(),
@@ -296,77 +308,27 @@ class StatesetController() {
         )
     }
 
-    private fun Product.toJson(): Map<String, String> {
-        return kotlin.collections.mapOf(
-                "id" to id,
-                "name" to name,
-                "description" to description,
-                "product_url" to product_url,
-                "image_url" to image_url,
-                "breadcrumbs" to breadcrumbs,
-                "inventory" to inventory.toString(),
-                "price" to price.toString(),
-                "custom_color" to custom_color,
-                "barcode" to barcode,
-                "inventoryStatus" to inventoryStatus.toString(),
-                "status" to status.toString(),
-                "custom_size" to custom_size,
-                "custom_brand" to custom_brand,
-                "custom_gender" to custom_gender,
-                "group_id" to group_id,
-                "active" to active.toString(),
-                "createdAt" to createdAt,
-                "lastUpdated" to lastUpdated,
-                "party" to party.name.organisation.toString(),
-                "counterparty" to counterparty.name.organisation.toString()
-        )
-    }
-
-    /** Returns a list of Products. */
-
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping("/getProducts")
-    @ApiOperation(value = "Get Products")
-    fun getProducts(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val productStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Product::class.java).states
-        val productStates = productStateAndRefs.map { it.state.data }
-        return productStates.map { it.toJson() }
-    }
-
 
     /** Returns a list of existing Messages. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getMessages")
     @ApiOperation(value = "Get Messages")
     fun getMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
+        val sortAttribute = SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME)
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>(sorting = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.DESC)))).states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.map { it.toJson() }
     }
 
 
-    /** Returns a list of existing Messages. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @GetMapping("/getTokens")
-    @ApiOperation(value = "Get Tokens")
-    fun getTokens(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val tokenStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Token::class.java).states
-        val tokenStates = tokenStateAndRefs.map { it.state.data }
-        return tokenStates.map { it.toJson() }
-    }
-
-
-
     /** Get Messages by UserId */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getMessages/userId")
     @ApiOperation(value = "Get Messages by userId")
     fun getMessagesByUserId(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.map { it.toJson() }
     }
@@ -374,140 +336,31 @@ class StatesetController() {
 
     /** Returns a list of received Messages. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getReceivedMessages")
     @ApiOperation(value = "Get Received Messages")
     fun getRecievedMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
         val messageStates = messageStateAndRefs.map { it.state.data }
         return messageStates.map { it.toJson() }
     }
 
     /** Returns a list of Sent Messages. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getSentMessages")
     @ApiOperation(value = "Get Sent Messages")
     fun getSentMessages(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
-        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Message::class.java).states
+        val messageStateAndRefs = this.getService(nodeName).proxy().vaultQueryBy<Message>().states
         val messageStates = messageStateAndRefs.map { it.state.data }
-        return messageStates.filter { it.fromMe }
-                .map { it.toJson() }
+        return messageStates.map { it.toJson() }
     }
-
-
-
-    /** Issue Token*/
-
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/issueToken")
-    @ApiOperation(value = "Issue tokens to the target party")
-    fun issueToken(@PathVariable nodeName: Optional<String>,
-                  @ApiParam(value = "The recipient of the token")
-                  @RequestParam(required = true) recipient: String,
-                  @ApiParam(value = "The amount of the token")
-                  @RequestParam(required = true) amount: Int,
-                  @ApiParam(value = "The memo of the transaction")
-                  @RequestParam("memo") memo: String): ResponseEntity<Any?> {
-
-
-        val (status, message) = try {
-
-            val result = getService(nodeName).issueToken(recipient, amount, memo)
-
-            HttpStatus.CREATED to mapOf<String, String>(
-                    "recipient" to "$recipient",
-                    "amount" to "$amount",
-                    "memo" to "$memo",
-
-                    )
-
-        } catch (e: Exception) {
-            logger.error("Error issuing token to ${recipient}", e)
-            e.printStackTrace()
-            HttpStatus.BAD_REQUEST to e.message
-        }
-        return ResponseEntity<Any?>(message, status)
-    }
-
-
-
-
-
-    /** Move Token*/
-
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/moveToken")
-    @ApiOperation(value = "Move tokens to the target party")
-    fun moveToken(@PathVariable nodeName: Optional<String>,
-                    @ApiParam(value = "The recipient of the token")
-                    @RequestParam(required = true) recipient: String,
-                    @ApiParam(value = "The amount of the token")
-                    @RequestParam(required = true) amount: Int,
-                    @ApiParam(value = "The memo of the transaction")
-                    @RequestParam("memo") memo: String): ResponseEntity<Any?> {
-
-
-        val (status, message) = try {
-
-            val result = getService(nodeName).moveToken(recipient, amount, memo)
-
-            HttpStatus.CREATED to mapOf<String, String>(
-                    "recipient" to "$recipient",
-                    "amount" to "$amount",
-                    "memo" to "$memo"
-
-            )
-
-        } catch (e: Exception) {
-            logger.error("Error sending token to ${recipient}", e)
-            e.printStackTrace()
-            HttpStatus.BAD_REQUEST to e.message
-        }
-        return ResponseEntity<Any?>(message, status)
-    }
-
-
-
-    /** Redeem Token*/
-
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/redeemToken")
-    @ApiOperation(value = "Redeem tokens and remove them from the ledger")
-    fun redeemToken(@PathVariable nodeName: Optional<String>,
-                  @ApiParam(value = "The amount of the token")
-                  @RequestParam(required = true) amount: Int,
-                  @ApiParam(value = "The memo of the transaction")
-                  @RequestParam("memo") memo: String): ResponseEntity<Any?> {
-
-
-        val (status, message) = try {
-
-            val result = getService(nodeName).redeemToken(amount, memo)
-
-            HttpStatus.CREATED to mapOf<String, String>(
-                    "amount" to "$amount",
-                    "memo" to "$memo"
-
-                    )
-
-        } catch (e: Exception) {
-            logger.error("Error redeeming token", e)
-            e.printStackTrace()
-            HttpStatus.BAD_REQUEST to e.message
-        }
-        return ResponseEntity<Any?>(message, status)
-    }
-
 
 
     /** Send Message*/
 
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/sendMessage")
     @ApiOperation(value = "Send a message to the target party")
     fun sendMessage(@PathVariable nodeName: Optional<String>,
@@ -515,15 +368,18 @@ class StatesetController() {
                     @RequestParam(required = true) to: String,
                     @ApiParam(value = "The user Id for the message")
                     @RequestParam(required = true) userId: String,
+                    @ApiParam(value = "The message subject")
+                    @RequestParam(required = true) subject: String,
                     @ApiParam(value = "The message text")
                     @RequestParam("body") body: String): ResponseEntity<Any?> {
 
 
         val (status, message) = try {
 
-            val result = getService(nodeName).sendMessage(to, userId, body)
+            val result = getService(nodeName).sendMessage(to, userId, subject, body)
 
             HttpStatus.CREATED to mapOf<String, String>(
+                    "subject" to "$subject",
                     "body" to "$body",
                     "to" to "$to",
                     "userId" to "$userId"
@@ -538,41 +394,9 @@ class StatesetController() {
     }
 
 
-    /** Reply to Message*/
-
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping("/replyMessage")
-    @ApiOperation(value = "Reply to a message ")
-    fun sendMessage(@PathVariable nodeName: Optional<String>,
-                    @ApiParam(value = "The message id")
-                    @RequestParam(required = true) messageId: String,
-                    @ApiParam(value = "The message text")
-                    @RequestParam("body") body: String): ResponseEntity<Any?> {
-
-
-        val (status, message) = try {
-
-            val result = getService(nodeName).replyMessage(messageId, body)
-
-            HttpStatus.CREATED to mapOf<String, String>(
-                    "messageID" to "$messageId",
-                    "body" to "$body"
-            )
-
-        } catch (e: Exception) {
-            logger.error("Error replying to message to ${messageId}", e)
-            e.printStackTrace()
-            HttpStatus.BAD_REQUEST to e.message
-        }
-        return ResponseEntity<Any?>(message, status)
-    }
-
-
     /** Returns a list of existing Applications. */
 
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getApprovals")
     @ApiOperation(value = "Get Approvals")
     fun getApprovals(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -584,8 +408,7 @@ class StatesetController() {
 
     /** Returns a list of existing Applications. */
 
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getApplications")
     @ApiOperation(value = "Get Applications")
     fun getApplications(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -594,12 +417,21 @@ class StatesetController() {
         return applicationStates.map { it.toJson() }
     }
 
+    /** Returns a list of existing Proposals. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
+    @GetMapping(value = "/getProposals")
+    @ApiOperation(value = "Get Proposals")
+    fun getProposals(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
+        val proposalStateAndRefs = this.getService(nodeName).proxy().vaultQuery(Proposal::class.java).states
+        val proposalStates = proposalStateAndRefs.map { it.state.data }
+        return proposalStates.map { it.toJson() }
+    }
 
 
     /** Returns a list of existing Accounts. */
 
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getAccounts")
     @ApiOperation(value = "Get Accounts")
     fun getAccounts(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -611,7 +443,8 @@ class StatesetController() {
 
     /** Returns a list of existing Contacts. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getContacts")
     @ApiOperation(value = "Get Contacts")
     fun getContacts(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -623,7 +456,7 @@ class StatesetController() {
 
     /** Returns a list of existing Leads. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getLeads")
     @ApiOperation(value = "Get Leads")
     fun getLeads(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -634,7 +467,7 @@ class StatesetController() {
 
     /** Returns a list of existing Cases. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping("/getCases")
     @ApiOperation(value = "Get Cases")
     fun getCases(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -646,7 +479,7 @@ class StatesetController() {
 
     /** Returns a list of existing Invoices */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping(value = "/getInvoices")
     @ApiOperation(value = "Get Invoices")
     fun getInvoices(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -656,9 +489,9 @@ class StatesetController() {
     }
 
 
-    /** Returns a list of existing Agreements. */
+    /** Returns a list of existing Loans. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping(value = "/getLoans")
     @ApiOperation(value = "Get Loans")
     fun getLoans(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -670,8 +503,7 @@ class StatesetController() {
 
     /** Creates an Account. */
 
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/createAccount")
     @ApiOperation(value = "Create Account")
     fun createAccount(@PathVariable nodeName: Optional<String>,
@@ -720,7 +552,7 @@ class StatesetController() {
 
     /** Creates a Contact. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/createContact")
     @ApiOperation(value = "Create Contact")
     fun createContact(@PathVariable nodeName: Optional<String>,
@@ -758,7 +590,7 @@ class StatesetController() {
     /** Creates a Lead. */
 
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/createLead")
     @ApiOperation(value = "Create Lead")
     fun createLead(@PathVariable nodeName: Optional<String>,
@@ -797,7 +629,7 @@ class StatesetController() {
 
     /** Creates a Case. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/createCase")
     @ApiOperation(value = "Create Case")
     fun createCase(@PathVariable nodeName: Optional<String>,
@@ -840,7 +672,7 @@ class StatesetController() {
 
     /** Close the Case. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/closeCase")
     @ApiOperation(value = "Close Case")
     fun closeCase(@PathVariable nodeName: Optional<String>, @RequestParam("caseId") caseId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -863,7 +695,7 @@ class StatesetController() {
 
     /** Resolve Case. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/resolveCase")
     @ApiOperation(value = "Resolve Case")
     fun resolveCase(@PathVariable nodeName: Optional<String>, @RequestParam("caseId") caseId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -886,7 +718,7 @@ class StatesetController() {
 
     /** Escalate Case. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/escalateCase")
     @ApiOperation(value = "Escalate Case")
     fun escalateCase(@PathVariable nodeName: Optional<String>, @RequestParam("caseId") caseId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -910,12 +742,19 @@ class StatesetController() {
 
     /** Creates an Application. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/createApplication")
     @ApiOperation(value = "Create Application")
     fun createApplication(@PathVariable nodeName: Optional<String>,
                           @RequestParam("applicationId") applicationId: String,
                           @RequestParam("applicationName") applicationName: String,
+                          @RequestParam("businessAgeRange") businessAgeRange: BusinessAgeRange,
+                          @RequestParam("businessEmail") businessEmail: String,
+                          @RequestParam("businessPhone") businessPhone: String,
+                          @RequestParam("businessRevenueRange") businessRevenueRange: BusinessRevenueRange,
+                          @RequestParam("businessType") businessType: BusinessType,
+                          @RequestParam("estimatedPurchaseAmount") estimatedPurchaseAmount: Int,
+                          @RequestParam("estimatedPurchaseFrequency") estimatedPurchaseFrequency: EstimatedPurchaseFrequency,
                           @RequestParam("industry") industry: String,
                           @RequestParam("applicationStatus") applicationStatus: ApplicationStatus,
                           @RequestParam("partyName") partyName: String?): ResponseEntity<Any?> {
@@ -928,10 +767,16 @@ class StatesetController() {
 
         val (status, message) = try {
 
-            val result = getService(nodeName).createApplication(applicationId, applicationName, industry, applicationStatus, partyName)
+            val result = getService(nodeName).createApplication(applicationId, applicationName, businessAgeRange, businessEmail, businessPhone, businessRevenueRange, businessType, estimatedPurchaseAmount, estimatedPurchaseFrequency, industry, applicationStatus, partyName)
 
             HttpStatus.CREATED to mapOf<String, String>(
                     "applicationd" to "$applicationId",
+                    "applicationName" to "$applicationName",
+                    "businessAgeRange" to "$businessAgeRange",
+                    "businessEmail" to "$businessEmail",
+                    "businessPhone" to "$businessPhone",
+                    "businessType" to "$businessType",
+                    "applicationStatus" to "$applicationStatus",
                     "partyName" to "$partyName"
             )
 
@@ -949,7 +794,7 @@ class StatesetController() {
 
     /** Approve Application. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/approveApplication")
     @ApiOperation(value = "Approve Application")
     fun approveApplication(@PathVariable nodeName: Optional<String>, @RequestParam("applicationId") applicationId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -974,7 +819,7 @@ class StatesetController() {
 
     /** Reject Application. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/rejectApplication")
     @ApiOperation(value = "Reject Application")
     fun rejectApplication(@PathVariable nodeName: Optional<String>, @RequestParam("applicationId") applicationId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -999,7 +844,7 @@ class StatesetController() {
 
     /** Creates an Approval. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping("/createApproval")
     @ApiOperation(value = "Create Approval")
     fun createApproval(@PathVariable nodeName: Optional<String>,
@@ -1035,7 +880,7 @@ class StatesetController() {
 
     /** Approve Approval. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/approveApproval")
     @ApiOperation(value = "Approve Approval")
     fun approveApproval(@PathVariable nodeName: Optional<String>, @RequestParam("approvalId") approvalId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -1058,7 +903,7 @@ class StatesetController() {
 
     /** Reject Approval. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/rejectApproval")
     @ApiOperation(value = "Reject Approval")
     fun rejectApproval(@PathVariable nodeName: Optional<String>, @RequestParam("approvalId") approvalId: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -1081,7 +926,7 @@ class StatesetController() {
 
     /** Returns a list of existing Agreements. */
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping(value = "/getAgreements")
     @ApiOperation(value = "Get Agreements")
     fun getAgreements(@PathVariable nodeName: Optional<String>): List<Map<String, String>> {
@@ -1091,7 +936,7 @@ class StatesetController() {
     }
 
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping(value = "/getAllAgreements")
     @ApiOperation(value = "Get All Agreements")
     fun agreements(@PathVariable nodeName: Optional<String>): List<Agreement> {
@@ -1118,12 +963,119 @@ class StatesetController() {
     }
 
 
+
+    /** Creates a Proposal. */
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
+    @PostMapping(value = "/createProposal")
+    @ApiOperation(value = "Create Proposal")
+    fun createProposal(@PathVariable nodeName: Optional<String>,
+                       @RequestParam("proposalNumber") proposalNumber: String,
+                       @RequestParam("proposalName") proposalName: String,
+                       @RequestParam("proposalHash") proposalHash: String,
+                       @RequestParam("proposalStatus") proposalStatus: ProposalStatus,
+                       @RequestParam("proposalType") proposalType: ProposalType,
+                       @RequestParam("totalProposalValue") totalProposalValue: Int,
+                       @RequestParam("proposalStartDate") proposalStartDate: String,
+                       @RequestParam("proposalEndDate") proposalEndDate: String,
+                       @RequestParam("counterpartyName") counterpartyName: String?): ResponseEntity<Any?> {
+
+
+        if (nodeName == null) {
+            return ResponseEntity.status(TSResponse.BAD_REQUEST).body("Query parameter 'counterPartyName' missing or has wrong format.\n")
+        }
+
+
+        if (counterpartyName == null) {
+            return ResponseEntity.status(TSResponse.BAD_REQUEST).body("Query parameter 'counterPartyName' missing or has wrong format.\n")
+        }
+
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).createProposal(proposalNumber, proposalName, proposalHash, proposalStatus, proposalType, totalProposalValue, counterpartyName, proposalStartDate, proposalEndDate)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "proposalNumber" to "$proposalNumber",
+                    "proposalName" to "$proposalName",
+                    "proposalHash" to "$proposalHash",
+                    "proposalStatus" to "$proposalStatus",
+                    "proposalType" to "$proposalType",
+                    "totalProposalValue" to "$totalProposalValue",
+                    "proposalStartDate" to "$proposalStartDate",
+                    "proposalEndDate" to "$proposalEndDate",
+                    "party" to "$nodeName",
+                    "counterpartyName" to "$counterpartyName"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error sending Proposal to ${counterpartyName}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
+
+    /** Accept Proposal. */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
+    @PostMapping(value = "/acceptProposal")
+    @ApiOperation(value = "Accept Proposal")
+    fun acceptProposal(@PathVariable nodeName: Optional<String>, @RequestParam("proposalNumber") proposalNumber: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val proposalNumber = request.getParameter("proposalNumber")
+        val (status, message) = try {
+
+            val result = getService(nodeName).acceptProposal(proposalNumber)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "proposalNumber" to "$proposalNumber"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error accepting Proposal ${proposalNumber}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
+    /** Reject Proposal  */
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
+    @PostMapping(value = "/rejectProposal")
+    @ApiOperation(value = "Reject Proposal")
+    fun rejectProposal(@PathVariable nodeName: Optional<String>, @RequestParam("proposalNumber") proposalNumber: String, request: HttpServletRequest): ResponseEntity<Any?> {
+        val proposalNumber = request.getParameter("proposalNumber")
+        val (status, message) = try {
+
+            val result = getService(nodeName).rejectProposal(proposalNumber)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "proposalNumber" to "$proposalNumber"
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error rejecting Proposal ${proposalNumber}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
+
+
     /** Creates an Agreement. */
 
     /** Searchable PDF is mapped by agreement linearId **/
     /** Endpoint setup in BaaR OCR tool and State is created **/
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/createAgreement")
     @ApiOperation(value = "Create Agreement")
     fun createAgreement(@PathVariable nodeName: Optional<String>,
@@ -1176,8 +1128,7 @@ class StatesetController() {
 
 
     /** Activate Agreement. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/activateAgreement")
     @ApiOperation(value = "Activate Agreement")
     fun activateAgreement(@PathVariable nodeName: Optional<String>, @RequestParam("agreementNumber") agreementNumber: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -1200,8 +1151,7 @@ class StatesetController() {
 
 
     /** Terminate Agreement. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/terminateAgreement")
     @ApiOperation(value = "Terminate Agreement")
     fun terminateAgreement(@PathVariable nodeName: Optional<String>, @RequestParam("agreementNumber") agreementNumber: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -1224,8 +1174,7 @@ class StatesetController() {
 
 
     /** Renew Agreement. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/renewAgreement")
     @ApiOperation(value = "Renew Agreement")
     fun renweAgreement(@PathVariable nodeName: Optional<String>, @RequestParam("agreementNumber") agreementNumber: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -1248,8 +1197,7 @@ class StatesetController() {
 
 
     /** Amend Agreement. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/amendAgreement")
     @ApiOperation(value = "Amend Agreement")
     fun amendAgreement(@PathVariable nodeName: Optional<String>, @RequestParam("agreementNumber") agreementNumber: String, request: HttpServletRequest): ResponseEntity<Any?> {
@@ -1272,8 +1220,7 @@ class StatesetController() {
 
 
     /** Upload the File. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/upload")
     @ApiOperation(value = "Upload Agreement")
     fun upload(@PathVariable nodeName: Optional<String>, @RequestParam file: MultipartFile, @RequestParam uploader: String): ResponseEntity<String> {
@@ -1313,8 +1260,7 @@ class StatesetController() {
 
 
     /** Download the File. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @GetMapping(value = "/download")
     @ApiOperation(value = "Download Agreement")
     fun downloadByName(@PathVariable nodeName: Optional<String>, @RequestParam name: String): ResponseEntity<InputStreamResource> {
@@ -1352,37 +1298,12 @@ class StatesetController() {
         }
     }
 
-
-    /** Pay Invoice. */
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
-    @PostMapping(value = "/payInvoice")
-    @ApiOperation(value = "Pay Invoice")
-    fun payInvoice(@PathVariable nodeName: Optional<String>, @RequestParam("invoiceNumber") invoiceNumber: String, amount: Int, request: HttpServletRequest): ResponseEntity<Any?> {
-        val invoiceNumber = request.getParameter("invoiceNumber")
-        val (status, message) = try {
-
-            val result = getService(nodeName).payInvoice(invoiceNumber, amount)
-
-            HttpStatus.CREATED to mapOf<String, String>(
-                    "invoiceNumber" to "$invoiceNumber"
-            )
-
-        } catch (e: Exception) {
-            logger.error("Error paying Invoice ${invoiceNumber}", e)
-            e.printStackTrace()
-            HttpStatus.BAD_REQUEST to e.message
-        }
-        return ResponseEntity<Any?>(message, status)
-    }
-
     /** Creates an Invoice. */
 
     /** Searchable PDF is mapped by invoice linearId **/
     /** Endpoint setup in BaaR OCR tool and State is created **/
 
-
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/createInvoice")
     @ApiOperation(value = "Create Invoice")
     fun createInvoice(@PathVariable nodeName: Optional<String>,
@@ -1439,7 +1360,7 @@ class StatesetController() {
         return ResponseEntity<Any?>(message, status)
     }
 
-    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in"])
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://na57.lightning.force.com", "https://stateset.io", "https://stateset.in", "https://stateset.network"])
     @PostMapping(value = "/createLoan")
     @ApiOperation(value = "Create Loan")
     fun createLoan(@PathVariable nodeName: Optional<String>,
@@ -1448,7 +1369,6 @@ class StatesetController() {
                    @RequestParam("loanReason") loanReason: String,
                    @RequestParam("loanStatus") loanStatus: LoanStatus,
                    @RequestParam("loanType") loanType: LoanType,
-                   @RequestParam("loanInterestRate") loanInterestRate: Double,
                    @RequestParam("amountDue") amountDue: Int,
                    @RequestParam("amountPaid") amountPaid: Int,
                    @RequestParam("amountRemaining") amountRemaining: Int,
@@ -1473,14 +1393,13 @@ class StatesetController() {
 
         val (status, message) = try {
 
-            val result = getService(nodeName).createLoan(loanNumber, loanName, loanReason, loanStatus, loanType, loanInterestRate, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName)
+            val result = getService(nodeName).createLoan(loanNumber, loanName, loanReason, loanStatus, loanType, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName)
 
             HttpStatus.CREATED to mapOf<String, String>(
                     "loanNumber" to "$loanNumber",
                     "loanName" to "$loanName",
                     "loanStatus" to "$loanStatus",
                     "loanType" to "$loanType",
-                    "loanInterestRate" to "$loanInterestRate",
                     "amountDue" to "$amountDue",
                     "amountPaid" to "$amountPaid",
                     "amountRemaining" to "$amountRemaining",
