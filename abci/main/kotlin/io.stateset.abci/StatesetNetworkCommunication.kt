@@ -24,6 +24,7 @@ class StatesetNetworkCommunication : ABCIApplicationGrpc.ABCIApplicationImplBase
         val contact = gson.fromJson(String(byteArrayO), Contact::class.java)
         val application = gson.fromJson(String(byteArray), Application::class.java)
         val approval = gson.fromJson(String(byteArray), Approval::class.java)
+        val proposal = gson.fromJson(String(byteArray), Proposal::class.java)
         val agreement = gson.fromJson(String(byteArray), Agreement::class.java)
         val loan = gson.fromJson(String(byteArray), Loan::class.java)
         val invoice = gson.fromJson(String(byteArray), Invoice::class.java)
@@ -49,6 +50,13 @@ class StatesetNetworkCommunication : ABCIApplicationGrpc.ABCIApplicationImplBase
         })
     }
 
+    fun sendLead(l: Lead) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendLead(rpc, { e ->
+
+        })
+    }
+
     fun sendAccount(a: Account) {
         val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(a).getBytes())
         proto.sendAccount(rpc, { e ->
@@ -56,5 +64,40 @@ class StatesetNetworkCommunication : ABCIApplicationGrpc.ABCIApplicationImplBase
         })
     }
 
+    fun sendContact(c: Contact) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendContact(rpc, { e ->
+
+        })
+    }
+
+    fun sendProposal(p: Proposal) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendProposal(rpc, { e ->
+
+        })
+    }
+
+    fun sendApplication(a: Application) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendApplication(rpc, { e ->
+
+        })
+    }
+
+    fun sendCase(c: Case) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendCase(rpc, { e ->
+
+        })
+    }
+
+
+    fun sendAgreement(a: Agreement) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendAgreement(rpc, { e ->
+
+        })
+    }
 
 }
