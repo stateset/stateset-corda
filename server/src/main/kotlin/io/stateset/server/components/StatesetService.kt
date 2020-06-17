@@ -22,7 +22,7 @@ import io.stateset.*
 import io.stateset.account.TypeOfBusiness
 import io.stateset.agreement.AgreementStatus
 import io.stateset.agreement.AgreementType
-import io.stateset.application.ApplicationStatus
+import io.stateset.application.*
 import io.stateset.approval.ApprovalStatus
 import io.stateset.case.CasePriority
 import io.stateset.case.CaseStatus
@@ -31,6 +31,7 @@ import io.stateset.loan.LoanType
 import io.stateset.message.Message
 import io.stateset.proposal.ProposalStatus
 import io.stateset.proposal.ProposalType
+import io.stateset.purchaseorder.PurchaseOrderStatus
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -44,51 +45,8 @@ class StatesetService(
         private val logger = LoggerFactory.getLogger(CordaNodeServiceImpl::class.java)
     }
 
-    /** Issue a Token! */
-    fun issueToken(recipient: String, amount: Int, memo: String): SignedTransaction {
-        val proxy = this.nodeRpcConnection.proxy
-
-        val matches = proxy.partiesFromName(recipient, exactMatch = true)
-        logger.debug("issueToken, peers: {}", this.peers())
-        logger.debug("issueToken, target: {}, matches: {}", recipient, matches)
-
-        val recipient: Party = when {
-            matches.isEmpty() -> throw IllegalArgumentException("Target string \"$recipient\" doesn't match any nodes on the network.")
-            matches.size > 1 -> throw IllegalArgumentException("Target string \"$recipient\"  matches multiple nodes on the network.")
-            else -> matches.single()
-        }
-        // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(IssueTokenFlow::class.java, recipient, amount, memo).returnValue.getOrThrow()
-    }
-
-
-    /** Move a Token! */
-    fun moveToken(recipient: String, amount: Int, memo: String): SignedTransaction {
-        val proxy = this.nodeRpcConnection.proxy
-
-        val matches = proxy.partiesFromName(to, exactMatch = true)
-        logger.debug("sendToken, peers: {}", this.peers())
-        logger.debug("sendToken, target: {}, matches: {}", to, matches)
-
-        val recipient: Party = when {
-            matches.isEmpty() -> throw IllegalArgumentException("Target string \"$recipient\" doesn't match any nodes on the network.")
-            matches.size > 1 -> throw IllegalArgumentException("Target string \"$recipient\"  matches multiple nodes on the network.")
-            else -> matches.single()
-        }
-        // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(MoveTokenFlow::class.java, recipient, amount, memo).returnValue.getOrThrow()
-    }
-
-    /** Redeem a Token! */
-    fun redeemToken(amount: Int, memo: String): SignedTransaction {
-        val proxy = this.nodeRpcConnection.proxy
-
-        // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(RedeemTokenFlow::class.java, amount, memo).returnValue.getOrThrow()
-    }
-
     /** Send a Message! */
-    fun sendMessage(to: String, userId: String, message: String): SignedTransaction {
+    fun sendMessage(to: String, userId: String, subject: String, body: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(to, exactMatch = true)
@@ -101,15 +59,7 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(SendMessageFlow::class.java, to, userId, message).returnValue.getOrThrow()
-    }
-
-    /** Reply to a Message! */
-    fun replyMessage(messageId: String, body: String): SignedTransaction {
-        val proxy = this.nodeRpcConnection.proxy
-
-        // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(ReplyMessageFlow::class.java, messageId, body).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(SendMessageFlow::class.java, to, userId, subject, body).returnValue.getOrThrow()
     }
 
     /** Create an Application */
@@ -128,16 +78,6 @@ class StatesetService(
         // Start the flow, block and wait for the response.
         return proxy.startFlowDynamic(CreateApplicationFlow.Initiator::class.java, applicationId, applicationName, businessAgeRange, businessEmail, businessPhone, businessRevenueRange, businessType, estimatedPurchaseAmount, estimatedPurchaseFrequency, industry, applicationStatus, processor).returnValue.getOrThrow()
     }
-
-
-    /** Approve an Application! */
-    fun payInvoice(invoiceNumber: String, amount: Int): SignedTransaction {
-        val proxy = this.nodeRpcConnection.proxy
-
-        // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(PayInvoice.Initiator::class.java, invoiceNumber, amount).returnValue.getOrThrow()
-    }
-
 
 
     /** Approve an Application! */
@@ -291,6 +231,43 @@ class StatesetService(
         return proxy.startFlowDynamic(EscalateCaseFlow::class.java, caseId).returnValue.getOrThrow()
     }
 
+
+    /** Create a Purchase Order! */
+    fun createPurchaseOrder(purchaseOrderNumber: String, purchaseOrderName: String, purchaseOrderHash: String, purchaseOrderStatus: PurchaseOrderStatus, description: String, purchaseDate: String, deliveryDate: String, subtotal: Int, total: Int, vendorName: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        val matches = proxy.partiesFromName(vendorName, exactMatch = true)
+        logger.debug("createPurchaseOrder peers: {}", this.peers())
+        logger.debug("createPurchaseOrder, peer names: {}", this.peerNames())
+        logger.debug("createPurchaseOrder, target: {}, matches: {}", vendorName, matches)
+
+        val vendorName: Party = when {
+            matches.isEmpty() -> throw IllegalArgumentException("Target string \"$vendorName\" doesn't match any nodes on the network.")
+            matches.size > 1 -> throw IllegalArgumentException("Target string \"$vendorName\"  matches multiple nodes on the network.")
+            else -> matches.single()
+        }
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(CreatePurchaseOrderFlow.Purchaser::class.java, purchaseOrderNumber, purchaseOrderName, purchaseOrderHash, purchaseOrderStatus, description, purchaseDate, deliveryDate, subtotal, total, vendorName).returnValue.getOrThrow()
+    }
+
+    /** Complete a Purchase Order! */
+    fun completePurchaseOrder(purchaseOrderNumber: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(CompletePurchaseOrderFlow.CompletePurchaseOrderFlow::class.java, purchaseOrderNumber).returnValue.getOrThrow()
+    }
+
+
+    /** Cancel a Purchase Order! */
+    fun cancelPurchaseOrder(purchaseOrderNumber: String): SignedTransaction {
+        val proxy = this.nodeRpcConnection.proxy
+
+        // Start the flow, block and wait for the response.
+        return proxy.startFlowDynamic(CancelPurchaseOrderFlow.CancelPurchaseOrderFlow::class.java, purchaseOrderNumber).returnValue.getOrThrow()
+    }
+
+
     /** Create an Proposal! */
     fun createProposal(proposalNumber: String, proposalName: String, proposalHash: String, proposalStatus: ProposalStatus, proposalType: ProposalType, totalProposalValue: Int, counterpartyName: String, proposalStartDate: String, proposalEndDate: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
@@ -326,12 +303,14 @@ class StatesetService(
         return proxy.startFlowDynamic(RejectProposalFlow.RejectProposalFlow::class.java, proposalNumber).returnValue.getOrThrow()
     }
 
+
     /** Create an Agreement! */
     fun createAgreement(agreementNumber: String, agreementName: String, agreementHash: String, agreementStatus: AgreementStatus, agreementType: AgreementType, totalAgreementValue: Int, counterpartyName: String, agreementStartDate: String, agreementEndDate: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
         logger.debug("createAgreement, peers: {}", this.peers())
+        logger.debug("createAgreement, peer names: {}", this.peerNames())
         logger.debug("createAgreement, target: {}, matches: {}", counterpartyName, matches)
 
         val counterpartyName: Party = when {
@@ -385,6 +364,7 @@ class StatesetService(
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
         logger.debug("createInvoice, peers: {}", this.peers())
+        logger.debug("createInvoice, peer names: {}", this.peerNames())
         logger.debug("createInvoice, target: {}, matches: {}", counterpartyName, matches)
 
         val counterpartyName: Party = when {
@@ -397,11 +377,12 @@ class StatesetService(
     }
 
     /** Create a Loan! */
-    fun createLoan(loanNumber: String, loanName: String, loanReason: String, loanStatus: LoanStatus, loanType: LoanType, loanInterestRate: Double,  amountDue: Int, amountPaid: Int, amountRemaining: Int, subtotal: Int, total: Int, dueDate: String, periodStartDate: String, periodEndDate: String, counterpartyName: String): SignedTransaction {
+    fun createLoan(loanNumber: String, loanName: String, loanReason: String, loanStatus: LoanStatus, loanType: LoanType,  amountDue: Int, amountPaid: Int, amountRemaining: Int, subtotal: Int, total: Int, dueDate: String, periodStartDate: String, periodEndDate: String, counterpartyName: String): SignedTransaction {
         val proxy = this.nodeRpcConnection.proxy
 
         val matches = proxy.partiesFromName(counterpartyName, exactMatch = true)
         logger.debug("createLoan, peers: {}", this.peers())
+        logger.debug("createLoan, peer names: {}", this.peerNames())
         logger.debug("createLoan, target: {}, matches: {}", counterpartyName, matches)
 
         val counterpartyName: Party = when {
@@ -410,6 +391,6 @@ class StatesetService(
             else -> matches.single()
         }
         // Start the flow, block and wait for the response.
-        return proxy.startFlowDynamic(CreateLoanFlow.Loaner::class.java, loanNumber, loanName, loanReason, loanStatus, loanType, loanInterestRate, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName).returnValue.getOrThrow()
+        return proxy.startFlowDynamic(CreateLoanFlow.Loaner::class.java, loanNumber, loanName, loanReason, loanStatus, loanType, amountDue, amountPaid, amountRemaining, subtotal, total, dueDate, periodStartDate, periodEndDate, counterpartyName).returnValue.getOrThrow()
     }
 }
