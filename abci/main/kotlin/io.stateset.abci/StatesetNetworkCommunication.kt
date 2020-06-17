@@ -83,6 +83,20 @@ class StatesetNetworkCommunication : ABCIApplicationGrpc.ABCIApplicationImplBase
         })
     }
 
+    fun sendPurchaseOrder(po: PurchaseOrder) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendPurchaseOrder(rpc, { e ->
+
+        })
+    }
+
+    fun sendInvoice(i: Invoice) {
+        val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
+        proto.sendInvoice(rpc, { e ->
+
+        })
+    }
+
     fun sendApplication(a: Application) {
         val rpc = StringParam(Method.BROADCAST_TX_ASYNC, gson.toJson(m).getBytes())
         proto.sendApplication(rpc, { e ->
