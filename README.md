@@ -537,7 +537,7 @@ data class PurchaseOrder(val purchaseOrderNumber: String,
 The Purchase Order has the following business `flows` that can be called:
 
 - `CreatePurchaseOrder` - Create a PO between a purchaser and a vendor on Stateset
-- `CompletePurchaseOrder` - Completes the PO 
+- `CompletePurchaseOrder` - Completes the PO
 - `CancelPurchaseOrder` - Cancels the PO
 
 
