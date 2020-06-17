@@ -343,6 +343,39 @@ The Case has the following business `flows` that can be called:
 - `CloseCase` - Close the Case with a counterparty
 - `EscalateCase` - Escalate the Case
 
+
+#### Proposals
+
+// *****************
+// * Proposal State *
+// *****************
+
+@BelongsToContract(ProposalContract::class)
+data class Proposal(val proposalNumber: String,
+                    val proposalName: String,
+                    val proposalHash: String,
+                    val proposalStatus: ProposalStatus,
+                    val proposalType: ProposalType,
+                    val totalProposalValue: Int,
+                    val party: Party,
+                    val counterparty: Party,
+                    val proposalStartDate: String,
+                    val proposalEndDate: String,
+                    val active: Boolean?,
+                    val createdAt: String?,
+                    val lastUpdated: String?,
+                    override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+```
+
+The Proposal has the following business `flows` that can be called:
+
+- `CreateProposal` - Create a Proposal between your organization and a known counterparty on Stateset
+- `AcceptProposal` - Accepts the Proposal
+- `RejectProposal` - Rejects the Proposal
+
+
+
 #### Agreements
 
 
@@ -373,8 +406,8 @@ data class Agreement(val agreementNumber: String,
 
 The Agreement has the following business `flows` that can be called:
 
-- `CreateAgreement` - Create an Agreement between your organization and a known counterparty on the DSOA
-- `ActivateAgreement` - Activate the Agreement between your organization and a counterparty on the DSOA
+- `CreateAgreement` - Create an Agreement between your organization and a known counterparty on Stateset
+- `ActivateAgreement` - Activate the Agreement between your organization and a counterparty on Stateset
 - `TerminateAgreement` - Terminate an existing or active agreement
 - `RenewAgreement` - Renew an existing agreement that is or is about to expire
 - `ExpireAgreement` - Expire a currently active agreement between you and a counterparty
@@ -432,7 +465,7 @@ data class Loan(val loanNumber: String,
 
 The Loan has the following business `flows` that can be called:
 
-- `CreateLoan` - Create a Loan between your organization and a known counterparty
+- `CreateLoan` - Create a Loan between your organization and a known counterparty on Stateset
 - `PayLoan` - Pay off a Loan
 
 
@@ -473,6 +506,39 @@ The Invoice has the following business `flows` that can be called:
 - `CreateInvoice` - Create a Invoice between your organization and a known counterparty
 - `PayInvoice` - Pay an Invoice
 - `FactorInvoice` - Factor an Invoice
+
+
+#### Purchase Orders
+
+```jsx
+
+// ************************
+// * Purchase Order State *
+// ************************
+
+@BelongsToContract(PurchaseOrderContract::class)
+data class PurchaseOrder(val purchaseOrderNumber: String,
+                         val purchaseOrderName: String,
+                         val purchaseOrderHash: String,
+                         val purchaseOrderStatus: PurchaseOrderStatus,
+                         val description: String,
+                         val purchaseDate: String,
+                         val deliveryDate: String,
+                         val subtotal: Int,
+                         val total: Int,
+                         val purchaser: Party,
+                         val vendor: Party,
+                         val createdAt: String?,
+                         val lastUpdated: String?,
+                         override val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState, LinearState, QueryableState {
+
+```
+
+The Purchase Order has the following business `flows` that can be called:
+
+- `CreatePurchaseOrder` - Create a PO between a purchaser and a vendor on Stateset
+- `CompletePurchaseOrder` - Completes the PO 
+- `CancelPurchaseOrder` - Cancels the PO
 
 
 Testing
