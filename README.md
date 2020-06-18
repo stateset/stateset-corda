@@ -346,11 +346,12 @@ The Case has the following business `flows` that can be called:
 
 #### Proposals
 
+
+```jsx
+
 // *****************
 // * Proposal State *
 // *****************
-
-```jsx
 
 @BelongsToContract(ProposalContract::class)
 data class Proposal(val proposalNumber: String,
