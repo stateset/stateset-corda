@@ -350,6 +350,8 @@ The Case has the following business `flows` that can be called:
 // * Proposal State *
 // *****************
 
+```jsx
+
 @BelongsToContract(ProposalContract::class)
 data class Proposal(val proposalNumber: String,
                     val proposalName: String,
