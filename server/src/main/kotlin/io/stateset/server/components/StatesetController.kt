@@ -535,6 +535,112 @@ class StatesetController() {
     }
 
 
+    /** Issue Token*/
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping("/issueToken")
+    @ApiOperation(value = "Issue tokens to the target party")
+    fun issueToken(@PathVariable nodeName: Optional<String>,
+                   @ApiParam(value = "The recipient of the token")
+                   @RequestParam(required = true) recipient: String,
+                   @ApiParam(value = "The amount of the token")
+                   @RequestParam(required = true) amount: Int,
+                   @ApiParam(value = "The memo of the transaction")
+                   @RequestParam("memo") memo: String): ResponseEntity<Any?> {
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).issueToken(recipient, amount, memo)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "recipient" to "$recipient",
+                    "amount" to "$amount",
+                    "memo" to "$memo",
+
+                    )
+
+        } catch (e: Exception) {
+            logger.error("Error issuing token to ${recipient}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
+
+
+
+    /** Move Token*/
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping("/moveToken")
+    @ApiOperation(value = "Move tokens to the target party")
+    fun moveToken(@PathVariable nodeName: Optional<String>,
+                  @ApiParam(value = "The recipient of the token")
+                  @RequestParam(required = true) recipient: String,
+                  @ApiParam(value = "The amount of the token")
+                  @RequestParam(required = true) amount: Int,
+                  @ApiParam(value = "The memo of the transaction")
+                  @RequestParam("memo") memo: String): ResponseEntity<Any?> {
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).moveToken(recipient, amount, memo)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "recipient" to "$recipient",
+                    "amount" to "$amount",
+                    "memo" to "$memo"
+
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error sending token to ${recipient}", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
+
+    /** Redeem Token*/
+
+
+    @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://stateset.io", "https://stateset.in"])
+    @PostMapping("/redeemToken")
+    @ApiOperation(value = "Redeem tokens and remove them from the ledger")
+    fun redeemToken(@PathVariable nodeName: Optional<String>,
+                    @ApiParam(value = "The amount of the token")
+                    @RequestParam(required = true) amount: Int,
+                    @ApiParam(value = "The memo of the transaction")
+                    @RequestParam("memo") memo: String): ResponseEntity<Any?> {
+
+
+        val (status, message) = try {
+
+            val result = getService(nodeName).redeemToken(amount, memo)
+
+            HttpStatus.CREATED to mapOf<String, String>(
+                    "amount" to "$amount",
+                    "memo" to "$memo"
+
+            )
+
+        } catch (e: Exception) {
+            logger.error("Error redeeming token", e)
+            e.printStackTrace()
+            HttpStatus.BAD_REQUEST to e.message
+        }
+        return ResponseEntity<Any?>(message, status)
+    }
+
+
     /** Creates an Account. */
 
     @CrossOrigin(origins = ["https://dapps.ngrok.io", "https://dsoa.network", "https://camila.network", "http://localhost:8080", "http://localhost:3000", "https://statesets.com", "https://app.stateset.io", "https://stateset.in", "https://stateset.network"])
